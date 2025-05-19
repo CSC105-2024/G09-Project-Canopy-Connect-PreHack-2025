@@ -137,6 +137,20 @@ exports.Prisma.PostScalarFieldEnum = {
   authorImage: 'authorImage'
 };
 
+exports.Prisma.LikeScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  postId: 'postId'
+};
+
+exports.Prisma.CommentScalarFieldEnum = {
+  id: 'id',
+  content: 'content',
+  postId: 'postId',
+  userId: 'userId',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.ImageScalarFieldEnum = {
   id: 'id',
   url: 'url',
@@ -175,6 +189,8 @@ exports.Prisma.NullsOrder = {
 exports.Prisma.ModelName = {
   User: 'User',
   Post: 'Post',
+  Like: 'Like',
+  Comment: 'Comment',
   Image: 'Image',
   File: 'File',
   Link: 'Link',
