@@ -10,15 +10,16 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "mysql"
   url      = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
 model User {
   id        Int        @id @default(autoincrement())
   username  String     @unique
   password  String
-  profile   String?
+  profile   String? //store user profile picture in url
   posts     Post[]
   likes     Like[]
   comments  Comment[]
@@ -28,8 +29,7 @@ model User {
 
 model Post {
   id          Int        @id @default(autoincrement())
-  title       String
-  content     String?
+  content     String
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 

@@ -114,6 +114,9 @@ Prisma.NullTypes = {
  */
 
 exports.Prisma.TransactionIsolationLevel = makeStrictEnum({
+  ReadUncommitted: 'ReadUncommitted',
+  ReadCommitted: 'ReadCommitted',
+  RepeatableRead: 'RepeatableRead',
   Serializable: 'Serializable'
 });
 
@@ -128,7 +131,6 @@ exports.Prisma.UserScalarFieldEnum = {
 
 exports.Prisma.PostScalarFieldEnum = {
   id: 'id',
-  title: 'title',
   content: 'content',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
@@ -183,6 +185,39 @@ exports.Prisma.SortOrder = {
 exports.Prisma.NullsOrder = {
   first: 'first',
   last: 'last'
+};
+
+exports.Prisma.UserOrderByRelevanceFieldEnum = {
+  username: 'username',
+  password: 'password',
+  profile: 'profile'
+};
+
+exports.Prisma.PostOrderByRelevanceFieldEnum = {
+  content: 'content',
+  authorName: 'authorName',
+  authorImage: 'authorImage'
+};
+
+exports.Prisma.CommentOrderByRelevanceFieldEnum = {
+  content: 'content'
+};
+
+exports.Prisma.ImageOrderByRelevanceFieldEnum = {
+  url: 'url'
+};
+
+exports.Prisma.FileOrderByRelevanceFieldEnum = {
+  name: 'name',
+  url: 'url'
+};
+
+exports.Prisma.LinkOrderByRelevanceFieldEnum = {
+  url: 'url'
+};
+
+exports.Prisma.TagOrderByRelevanceFieldEnum = {
+  name: 'name'
 };
 
 
