@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import userRoute from "./user.route.js";
-const router = new Hono()
+const mainRouter = new Hono()
 
-router.route('/user',userRoute)
+mainRouter.route('/user',userRoute)
 
-export default router
+export default mainRouter
