@@ -9,7 +9,7 @@ export const Header = () => {
       <header className="flex items-center relative">
         <Link to="/" className="flex items-center">
           <img
-            src={'/logo.png'} // Ensure logo.png is in the public folder
+            src={'/logo.png'}
             alt="Canopy Green Logo"
             className="w-[46px] h-[46px]"
           />
@@ -36,10 +36,8 @@ export const Header = () => {
 // Hero Component
 export const Hero = () => {
   return (
-    // This section will be full-width.
-    // Ensure wallpaper.png is in the public folder for bg-[url('/wallpaper.png')]
     <section className="w-full bg-[url('/wallpaper.png')] bg-cover bg-center h-[458px] flex items-center justify-center">
-      {/* Inner div for content alignment and padding, can have its own max-width if needed */}
+      {}
       <div className="text-center text-white max-w-[1015px] px-5 py-0 max-sm:px-[15px] max-sm:py-0">
         <h1 className="text-[32px] font-bold mb-2.5 max-sm:text-2xl">
           Welcome to Canopy Green
