@@ -5,6 +5,7 @@ import './index.css';
 import Homepage from './page/Homepage';
 import LoginPageWithAlert from './page/Login';
 import { Post } from './page/Post';
+import { Useredit } from './page/UserEdit';
 
 const router = createBrowserRouter([
   {
@@ -21,7 +22,11 @@ const router = createBrowserRouter([
   },
   {
     path: "/blog",
-    element: <Post></Post>,
+    element: <Post />,
+  },
+    {
+    path: "/useredit",
+    element: <Useredit />
   },
 ]);
 
