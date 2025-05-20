@@ -14,9 +14,7 @@ export const Header = ({ isLoggedIn, userName, userAvatar, onLogout }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  useEffect(() => {
-    
-  },[])
+  
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -426,6 +424,7 @@ const Homepage = () => {
   const [currentUser, setCurrentUser] = useState({
     name: null,
     avatar:null,
+    email: null,
   });
 
   useEffect(()=> {
@@ -438,10 +437,9 @@ const Homepage = () => {
           setIsLoggedIn(true);
           setCurrentUser({
             name: data.user.username,
-            avatar: data.user.profile.avatarUrl,
+            email: data.user.email,
+            avatar: data.user.profile,
           });
-          
-          
           
         }else {
           setIsLoggedIn(false);

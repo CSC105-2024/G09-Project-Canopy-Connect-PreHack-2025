@@ -163,11 +163,37 @@ export const Useredit = () => {
   const navigate = useNavigate();
 
   // This would ideally come from AuthContext/global state
+  //This will import the api from auth
+  useEffect(()=> {
+    const checkAuth = async() => {
+      try {
+        const data = await fetchCurrentUser();
+        console.log(data);
+        if(data.loggedIn) {
+          setIsLoggedIn(true);
+          setCurrentUser({
+            name: data.user.username,
+            email: data.user.email,
+            avatar: data.user.profile,
+          });
+          
+        }else {
+          setIsLoggedIn(false);
+          setCurrentUser(null);
+        }
+      } catch (error) {
+        console.log("Auth check failed",error);
+        setIsLoggedIn(false);
+      }
+    };
+    checkAuth();
+  },[])
+
   const [currentUserData, setCurrentUserData] = useState({
-    fullName: "Thanaposh",
-    username: "thanaposh_cg",
-    email: "thanaposh@canopygreen.com",
-    avatarUrl: "/usericon60px.png",
+    fullName: "",
+    username: "",
+    email: "",
+    avatarUrl: "usericon60px.png",
   });
   
   const [usernameInput, setUsernameInput] = useState(currentUserData.username);
@@ -307,7 +333,7 @@ export const Useredit = () => {
               onError={(e) => {e.target.onerror = null; e.target.src="https://placehold.co/96x96/cccccc/FFFFFF?text=Ava";}}
             />
             <div className="flex-grow text-center sm:text-left">
-              <p className="text-sm text-gray-500 mb-3">Must be JPEG, PNG, or GIF and cannot exceed 2MB.</p>
+              <p className="text-sm text-gray-500 mb-3">Must be JPEG or PNG</p>
               <div className="flex gap-2 justify-center sm:justify-start">
                 <label htmlFor="avatarUpload" className="bg-[#14AE5C] text-white text-sm font-medium py-2 px-3 rounded-md cursor-pointer hover:bg-[#129b52] transition-colors">
                   Upload Profile Picture
