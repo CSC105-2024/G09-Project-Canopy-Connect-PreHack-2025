@@ -16,6 +16,7 @@ const createUser = async(c:Context) => {
         const token = generateToken({ id: newUser.id },"1d");
         c.header('Set-Cookie', `userToken=${token}; HttpOnly; Path=/; Max-Age=86400; SameSite=Strict`);
         return c.json({
+            success: true,
             message: "User created",
             user: newUser
         })

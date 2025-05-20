@@ -14,7 +14,7 @@ import { Link, useNavigate } from "react-router-dom";
 const Header = ({ isLoggedIn, userName, userAvatar, onLogout }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
-
+  
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -164,38 +164,13 @@ export const Useredit = () => {
 
   // This would ideally come from AuthContext/global state
   //This will import the api from auth
-  useEffect(()=> {
-    const checkAuth = async() => {
-      try {
-        const data = await fetchCurrentUser();
-        console.log(data);
-        if(data.loggedIn) {
-          setIsLoggedIn(true);
-          setCurrentUser({
-            name: data.user.username,
-            email: data.user.email,
-            avatar: data.user.profile,
-          });
-          
-        }else {
-          setIsLoggedIn(false);
-          setCurrentUser(null);
-        }
-      } catch (error) {
-        console.log("Auth check failed",error);
-        setIsLoggedIn(false);
-      }
-    };
-    checkAuth();
-  },[])
-
+  
   const [currentUserData, setCurrentUserData] = useState({
-    fullName: "",
     username: "",
     email: "",
     avatarUrl: "usericon60px.png",
   });
-  
+
   const [usernameInput, setUsernameInput] = useState(currentUserData.username);
   const [emailInput, setEmailInput] = useState(currentUserData.email);
   
@@ -212,19 +187,44 @@ export const Useredit = () => {
   const [isUserLoggedIn, setIsUserLoggedIn] = useState(true);
 
   // Effect to update form fields if currentUserData changes (e.g., from global state)
-  useEffect(() => {
-    setUsernameInput(currentUserData.username);
-    setEmailInput(currentUserData.email);
-    setAvatarPreview(currentUserData.avatarUrl);
-  }, [currentUserData]);
+  useEffect(()=> {
+    const checkAuth = async() => {
+      try {
+        const data = await fetchCurrentUser();
+        console.log(data);
+        
+        if(data.loggedIn) {
+          setIsUserLoggedIn(true);
+          setCurrentUserData({
+            name: data.user.username,
+            email: data.user.email,
+            avatarUrl: data.user.profile,
+          });
+          
+        }else {
+          setIsUserLoggedIn(false);
+          setCurrentUserData(null);
+        }
+      } catch (error) {
+        console.log("Auth check failed",error);
+        setIsUserLoggedIn(false);
+      }
+    };
+    checkAuth();
+  },[])
 
 
-  const handleActualLogout = () => {
-    setIsUserLoggedIn(false);
-    alert("You have been logged out.");
-    navigate("/");
+  const handleActualLogout = async() => {
+    const logout = await logoutUser();
+    if(logout){
+      setIsUserLoggedIn(false);
+      navigate("/");
+    }
+    else{
+      console.error("Failed to log out.");
+    }
   };
-
+  
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
     if (file) {

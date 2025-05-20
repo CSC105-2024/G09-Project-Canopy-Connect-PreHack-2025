@@ -32,3 +32,17 @@ export const logoutUser = async () => {
     }
 }
 
+export const registerUser = async(username,password,email) => {
+    try {
+        const res = await Axios.post('/user/register',{
+            username,
+            password,
+            email
+        })
+        return res.data;
+    } catch (error) {
+        console.error('Register error:',error);
+        throw error;
+    }
+}
+

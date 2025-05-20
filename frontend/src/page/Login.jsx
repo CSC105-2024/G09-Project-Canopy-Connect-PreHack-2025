@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom"; // Added useNavigate
-import { loginUser } from "../api/auth";
+import { loginUser, registerUser } from "../api/auth";
 
 
 // Simplified utility function for joining class names
@@ -250,7 +250,7 @@ export const SignupForm = ({
   const [termsAgreed, setTermsAgreed] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async(e) => {
     e.preventDefault();
     setError(""); 
 
@@ -265,6 +265,10 @@ export const SignupForm = ({
     if (!termsAgreed) {
       setError("You must agree to the terms and conditions.");
       return;
+    }
+    const signUp = await registerUser(username,password,email);
+    if(!signUp.success){
+      console.error("Create account failed.")
     }
     onSignUp({username, email, password, termsAgreed });
   };
