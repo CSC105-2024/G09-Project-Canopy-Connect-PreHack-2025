@@ -2,7 +2,9 @@ import { Hono } from "hono";
 import { createUser, decodeCookie, loginUser, logoutUser, 
     updateEmail, 
 updatePassword, updateProfile, updateUsername} from "../controllers/user.controller.js";
+
 import{ authMiddleware } from "../middlewares/auth.js";
+
 const userRoute = new Hono();
 
 userRoute.post('/register',createUser); // pass

@@ -46,3 +46,54 @@ export const registerUser = async(username,password,email) => {
     }
 }
 
+export const updateUsername = async(id, newUsername) => {
+    try {
+        const res = await Axios.patch('/user/updateUsername',{
+            id,
+            newUsername
+        })
+        return res.data;
+    } catch (error) {
+        console.error('Update username error:',error);
+        throw error;
+    }
+}
+
+export const updatePassword = async(id, newPassword) => {
+    try {
+        const res = await Axios.patch('/user/updatePassword',{
+            id,
+            newPassword
+        })
+        return res.data;
+    } catch (error) {
+        console.error('Update username error:',error);
+        throw error;
+    }
+}
+
+export const updateEmail = async(id, newEmail) => {
+    try {
+        const res = await Axios.patch('/user/updateEmail',{
+            id,
+            newEmail
+        })
+        return res.data;
+    } catch (error) {
+        console.error('Update username error:',error);
+        throw error;
+    }
+}
+
+export const updateProfile = async(id, newProfile) => {
+    try {
+        const res = await Axios.patch('/user/updatePassword',{
+            id,
+            newProfile
+        })
+        return res.data;
+    } catch (error) {
+        console.error('Update username error:',error);
+        throw error;
+    }
+}

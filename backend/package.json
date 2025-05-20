@@ -7,15 +7,17 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
-    "@hono/node-server": "^1.14.1",
+    "@hono/node-server": "^1.14.2",
     "@prisma/client": "^6.8.2",
     "bcrypt": "^6.0.0",
     "dotenv": "^16.5.0",
+    "formidable": "^3.5.4",
     "hono": "^4.7.10",
     "jsonwebtoken": "^9.0.2"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
+    "@types/formidable": "^3.4.5",
     "@types/jsonwebtoken": "^9.0.9",
     "@types/node": "^20.11.17",
     "prisma": "^6.8.2",

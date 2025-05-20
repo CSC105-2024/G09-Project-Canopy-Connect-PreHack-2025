@@ -1,16 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { logoutUser } from "../api/auth";
-
-// NOTES:
-// 1. This Useredit.jsx page assumes a user is logged in.
-// 2. In a real application, `currentUserData` would come from an AuthContext or global state.
-//    Profile updates (avatar, details, password) would involve API calls to a backend.
-// 3. Header, Footer, and Button components are replicated here for self-containment.
-//    Ideally, these should be imported from a shared components directory.
-// 4. Image paths need to be correct (e.g., /logo.png, /usericon60px.png).
-// 5. File upload for avatar is simulated.
-
+import { updateUsername, updateEmail, updatePassword, updateProfile, fetchCurrentUser ,logoutUser} from "../api/auth";
 
 
 // --- Header (structure from previous correction) ---
@@ -33,11 +23,14 @@ const Header = ({ isLoggedIn, userName, userAvatar, onLogout }) => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [dropdownOpen]);
-
+  const navigate = useNavigate();
   const handleLogoutClick = async() => {
+    await logoutUser();
     setDropdownOpen(false);
-    const logout = await logoutUser();
-    navigate("/");
+    if (onLogout) {
+      onLogout();
+    }
+    navigate('/');
   };
 
   return (
@@ -164,9 +157,6 @@ const Button = ({ children, className, variant = "primary", size = "md", type = 
 export const Useredit = () => {
   const navigate = useNavigate();
 
-  // This would ideally come from AuthContext/global state
-  //This will import the api from auth
-  
   const [currentUserData, setCurrentUserData] = useState({
     username: "",
     email: "",
@@ -190,17 +180,30 @@ export const Useredit = () => {
 
   // Effect to update form fields if currentUserData changes (e.g., from global state)
   
-
-
-  const handleActualLogout = async() => {
-    const logout = await logoutUser();
-    if(logout){
+  useEffect(() => {
+  const fetchData = async () => {
+    try {
+      const userData = await fetchCurrentUser(); // make sure this returns the correct shape
+      setCurrentUserData(userData);
+      setUsernameInput(userData.username || '');
+      setEmailInput(userData.email || '');
+      setAvatarPreview(userData.avatarUrl || '/usericon60px.png');
+    } catch (error) {
+      console.error("Error fetching user data:", error);
       setIsUserLoggedIn(false);
-      navigate("/");
     }
-    else{
-      console.error("Failed to log out.");
-    }
+  };
+
+  fetchData();
+  }, []);
+
+  
+
+  const handleActualLogout = async () => {
+    await logoutUser(); // assuming logoutUser exists
+    setIsUserLoggedIn(false); 
+    setCurrentUserData(null);
+    navigate("/");
   };
   
   const handleAvatarChange = (e) => {
