@@ -1,18 +1,18 @@
 import type { Context } from "hono";
 import userModel from "../models/user.model.js";
 import bcrypt from 'bcrypt'
-import { generateToken } from "../utils/jwt.js";
+import { generateToken,verifyToken } from "../utils/jwt.js";
 
 
 const createUser = async(c:Context) => {
     try {
         const body = await c.req.json();
-        if(!body.username || !body.password){
+        if(!body.username || !body.password || !body.email){
             return c.json({
-                error: "Missing username or password"
+                error: "Missing username, password or email."
             },400);
         }
-        const newUser = await userModel.createUser(body.username,body.password);
+        const newUser = await userModel.createUser(body.username,body.password,body.email);
         const token = generateToken({ id: newUser.id },"1d");
         c.header('Set-Cookie', `userToken=${token}; HttpOnly; Path=/; Max-Age=86400; SameSite=Strict`);
         return c.json({
@@ -60,16 +60,20 @@ const updateProfile = async(c:Context) => {
 }
 
 const loginUser = async (c: Context) => {
+  console.log("Backend part");
+  
   try {
     const body = await c.req.json();
     const { username, password, rememberMe } = body;
+    console.log(username +" "+password+" "+rememberMe);
+    
     if (!username || !password) {
       return c.json({ error: "Missing username or password." }, 400);
     }
     const USER = await userModel.getUserByUsername(username);
     if(!USER){
         return c.json({
-            error: "Invalid username."
+            error: "Invalid username or password."
         },401)
     }
     const user = await userModel.loginUser(username, password);
@@ -90,6 +94,7 @@ const loginUser = async (c: Context) => {
     }
     c.header("Set-Cookie", cookie);
     return c.json({
+      success: true,
       message: "Login successful",
       token,
       user: {
@@ -156,6 +161,34 @@ const updatePassword = async (c: Context) => {
         return c.json({ error: "Internal server error." }, 500);
     }
 };
+
+//update email
+const updateEmail = async(c:Context) => {
+    try {
+        const body = await c.req.json();
+        const user = c.get("user");
+        const userId = user.id;
+        if(!body.newEmail) {
+            return c.json({
+                error: "New email is required."
+            },400)
+        }
+        const updateUser = await userModel.updateUsername(userId,body.newUsername);
+        return c.json({
+            message: "Username updated successfully.",
+            user: {
+                id: updateUser.id,
+                email: updateUser.email
+            }
+        })
+    } catch (error) {
+        console.error("Update email error:",error);
+        return c.json({
+            error: "Internal server error"
+        },500)
+    }
+}
+
 //log out
 const logoutUser = async(c:Context) => {
     try {
@@ -170,4 +203,32 @@ const logoutUser = async(c:Context) => {
         },500)
     }
 }
-export {createUser,updateProfile,loginUser,updateUsername,updatePassword,logoutUser}
+
+
+
+//decode cookie
+const decodeCookie = async(c:Context)=> {
+    try {
+    const token = c.req.header('cookie')?.match(/userToken=([^;]+)/)?.[1];
+    if (!token) return c.json({ loggedIn: false }, 200);
+
+    const payload = verifyToken(token); // function ของคุณสำหรับตรวจ JWT
+    if (!payload) return c.json({ loggedIn: false }, 200);
+
+    const user = await userModel.getUserInfo(payload.id);
+    if (!user) return c.json({ loggedIn: false }, 200);
+
+    return c.json({
+      loggedIn: true,
+      user: { id: user.id, username: user.username, profile: user.profile },
+    }, 200);
+      
+  } catch {
+    return c.json({ loggedIn: false }, 200);
+  }
+}
+
+
+
+export {createUser,updateProfile,loginUser,updateUsername,updatePassword,
+    logoutUser,decodeCookie,updateEmail}

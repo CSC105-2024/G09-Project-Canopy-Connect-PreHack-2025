@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { data, Link, useNavigate } from "react-router-dom";
+import { fetchCurrentUser, logoutUser } from "../api/auth";
 
 // NOTES:
 // 1. This version includes a "Simulate Login" button on the Homepage for testing.
@@ -13,6 +14,9 @@ export const Header = ({ isLoggedIn, userName, userAvatar, onLogout }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
+  useEffect(() => {
+    
+  },[])
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -420,27 +424,47 @@ const Homepage = () => {
   // Simulated authentication state (local to Homepage for this demo)
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState({
-    name: "Thanaposh",
-    avatar: "/usericon60px.png", // Default mock avatar
+    name: null,
+    avatar:null,
   });
 
-  // Function to simulate a login
-  const handleSimulateLogin = () => {
-    setIsLoggedIn(true);
-    // In a real app, user data would be fetched or set from auth provider
-    setCurrentUser({
-      name: "Thanaposh", // Example username
-      avatar: "/usericon60px.png", // Example avatar path
-    });
-    // Optionally navigate to a different page or just re-render
-    // navigate('/'); // Or navigate('/dashboard') etc.
-  };
+  useEffect(()=> {
+    const checkAuth = async() => {
+      try {
+        const data = await fetchCurrentUser();
+        console.log(data);
+        
+        if(data.loggedIn) {
+          setIsLoggedIn(true);
+          setCurrentUser({
+            name: data.user.username,
+            avatar: data.user.profile.avatarUrl,
+          });
+          
+          
+          
+        }else {
+          setIsLoggedIn(false);
+          setCurrentUser(null);
+        }
+      } catch (error) {
+        console.log("Auth check failed",error);
+        setIsLoggedIn(false);
+      }
+    };
+    checkAuth();
+  },[])
 
   // Function to handle logout
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    setCurrentUser(null); // Clear user data
-    navigate("/"); // Navigate to home after logout
+  const handleLogout = async() => {
+    const logout = await logoutUser();
+    if(logout){
+      setIsLoggedIn(false);
+      setCurrentUser(null); // Clear user data
+      navigate("/"); // Navigate to home after logout
+    }else{
+      console.error("Failed to log out.");
+    }
   };
 
   return (
@@ -452,22 +476,6 @@ const Homepage = () => {
         onLogout={handleLogout}
       />
       <main className="flex-grow">
-        {/* Simulate Login Button - Only shown if not logged in */}
-        {!isLoggedIn && (
-          <div className="text-center my-6 p-4 bg-yellow-100 border border-yellow-300 rounded-md max-w-md mx-auto">
-            <p className="text-sm text-yellow-700 mb-2">
-              This is a testing feature. Click the button below to simulate being logged in.
-              In a real application, you would go to the Login page.
-            </p>
-            <button
-              onClick={handleSimulateLogin}
-              className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-            >
-              Simulate Login
-            </button>
-          </div>
-        )}
-
         <Hero isLoggedIn={isLoggedIn} />
         <div className="w-full max-w-[1440px] mx-auto my-0">
           <Features />

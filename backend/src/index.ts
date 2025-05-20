@@ -4,9 +4,7 @@ import dotenv from 'dotenv'
 import { PrismaClient } from './generated/prisma/index.js'
 import { cors } from 'hono/cors'
 import mainRouter from './routes/index.js'
-
 const app = new Hono()
-app.route('/',mainRouter)
 export const db = new PrismaClient()
 dotenv.config()
 app.use('*',
@@ -17,7 +15,7 @@ app.use('*',
 app.get('/', (c) => {
   return c.text('Hello Hono!')
 })
-
+app.route('/',mainRouter)
 serve({
   fetch: app.fetch,
   port: 8000,

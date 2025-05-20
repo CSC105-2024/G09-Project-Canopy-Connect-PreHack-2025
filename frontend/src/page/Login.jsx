@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom"; // Added useNavigate
+import { loginUser } from "../api/auth";
+
 
 // Simplified utility function for joining class names
 export function cn(...inputs) {
@@ -148,15 +150,22 @@ export const LoginForm = ({
 }) => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
-
-  const handleSubmit = (e) => {
+  const [rememberMe, setRememberMe] = useState(false);  
+  
+  const navigate = useNavigate();
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!username || !password) {
       alert("Please enter both username and password.");
       return;
     }
-    onLogin({ username, password, rememberMe });
+    const result = await loginUser(username, password, rememberMe);
+    if(!result.success){
+      console.error("Login unsuccessful, please try again.");
+      return;
+    }
+    onLogin({user:result.data,rememberMe})
+    navigate('/');
   };
 
   return (
@@ -205,7 +214,7 @@ export const LoginForm = ({
         />
       </div>
 
-      <Button
+      <Button 
         type="submit"
         variant="primary"
         size="lg"
@@ -229,12 +238,11 @@ export const LoginForm = ({
   );
 };
 
-// SignupForm Component
+// SignupForm Component need to be fixed
 export const SignupForm = ({
   onSignUp = () => {},
   onNavigateToLogin = () => {},
 }) => {
-  const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -246,7 +254,7 @@ export const SignupForm = ({
     e.preventDefault();
     setError(""); 
 
-    if (!fullName || !username || !email || !password || !confirmPassword) {
+    if (!username || !email || !password || !confirmPassword) {
       setError("All fields marked with * are required.");
       return;
     }
@@ -258,7 +266,7 @@ export const SignupForm = ({
       setError("You must agree to the terms and conditions.");
       return;
     }
-    onSignUp({ fullName, username, email, password, termsAgreed });
+    onSignUp({username, email, password, termsAgreed });
   };
 
   return (
@@ -275,20 +283,6 @@ export const SignupForm = ({
           <span className="block sm:inline">{error}</span>
         </div>
       )}
-
-      <div className="mb-[20px]">
-        <label htmlFor="signup-fullname" className="text-[#2F6F42] text-base mb-[10px] block font-medium">
-          Full Name<span className="text-[#F00]">*</span>
-        </label>
-        <input
-          id="signup-fullname"
-          type="text"
-          value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
-          className="w-full h-[46px] border text-base px-[15px] py-0 rounded-md border-solid border-gray-300 focus:border-[#14AE5C] focus:ring-1 focus:ring-[#14AE5C] outline-none max-sm:h-10"
-          required
-        />
-      </div>
 
       <div className="mb-[20px]">
         <label htmlFor="signup-username" className="text-[#2F6F42] text-base mb-[10px] block font-medium">
@@ -361,7 +355,7 @@ export const SignupForm = ({
         size="lg"
         fullWidth
         className="mb-5"
-        disabled={!termsAgreed || !fullName || !username || !email || !password || !confirmPassword || password !== confirmPassword}
+        disabled={!termsAgreed || !username || !email || !password || !confirmPassword || password !== confirmPassword}
       >
         Sign Up
       </Button>
@@ -489,16 +483,16 @@ const Index = () => {
     }
   }, [location.pathname]);
 
-  const handleLoginSubmit = (loginData) => {
-    console.log("Login attempt:", loginData);
-    alert(`Login submitted (see console for data).\nUsername: ${loginData.username}`);
-  };
 
-  const handleSignUpSubmit = (signUpData) => {
-    console.log("Sign Up attempt:", signUpData);
-    alert(`Signup submitted (see console for data).\nFull Name: ${signUpData.fullName}\nEmail: ${signUpData.email}`);
+  const handleLoginSubmit = (signUpData) => {
     setActiveTab("login"); 
     navigate('/login'); 
+  };
+
+
+  //need to be fix
+  const handleSignUpSubmit = (signUpData) => {
+    navigate("/");
   };
 
   const handleNavigateToSignUpView = () => {
