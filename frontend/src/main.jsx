@@ -5,7 +5,8 @@ import './index.css';
 import Homepage from './page/Homepage';
 import LoginPageWithAlert from './page/Login';
 import { Post } from './page/Post';
-import { Useredit } from './page/UserEdit';
+import { Useredit } from './page/Useredit';
+
 
 const router = createBrowserRouter([
   {
@@ -29,6 +30,7 @@ const router = createBrowserRouter([
     element: <Useredit />
   },
 ]);
+
 
 const rootElement = document.getElementById("root");
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { logoutUser } from "../api/auth";
 
 // NOTES:
 // 1. This Useredit.jsx page assumes a user is logged in.
@@ -9,6 +10,8 @@ import { Link, useNavigate } from "react-router-dom";
 //    Ideally, these should be imported from a shared components directory.
 // 4. Image paths need to be correct (e.g., /logo.png, /usericon60px.png).
 // 5. File upload for avatar is simulated.
+
+
 
 // --- Header (structure from previous correction) ---
 const Header = ({ isLoggedIn, userName, userAvatar, onLogout }) => {
@@ -31,11 +34,10 @@ const Header = ({ isLoggedIn, userName, userAvatar, onLogout }) => {
     };
   }, [dropdownOpen]);
 
-  const handleLogoutClick = () => {
+  const handleLogoutClick = async() => {
     setDropdownOpen(false);
-    if (onLogout) {
-      onLogout();
-    }
+    const logout = await logoutUser();
+    navigate("/");
   };
 
   return (
@@ -187,31 +189,7 @@ export const Useredit = () => {
   const [isUserLoggedIn, setIsUserLoggedIn] = useState(true);
 
   // Effect to update form fields if currentUserData changes (e.g., from global state)
-  useEffect(()=> {
-    const checkAuth = async() => {
-      try {
-        const data = await fetchCurrentUser();
-        console.log(data);
-        
-        if(data.loggedIn) {
-          setIsUserLoggedIn(true);
-          setCurrentUserData({
-            name: data.user.username,
-            email: data.user.email,
-            avatarUrl: data.user.profile,
-          });
-          
-        }else {
-          setIsUserLoggedIn(false);
-          setCurrentUserData(null);
-        }
-      } catch (error) {
-        console.log("Auth check failed",error);
-        setIsUserLoggedIn(false);
-      }
-    };
-    checkAuth();
-  },[])
+  
 
 
   const handleActualLogout = async() => {
