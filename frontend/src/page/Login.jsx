@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { loginUser } from "../api/auth"; // Ensure this path is correct
+import { loginUser, registerUser } from "../api/auth"; // Ensure this path is correct
 
 // Simplified utility function for joining class names
 export function cn(...inputs) {
@@ -325,14 +325,11 @@ export const SignupForm = ({
       setIsLoading(false);
       return;
     }
-
-    try {
-      onSignUp({username, email, password, termsAgreed });
-    } catch (apiError) {
-      setError("Sign up process is not fully implemented yet.");
-    } finally {
-      setIsLoading(false);
+    const register = await registerUser(username,password,email);
+    if(!register){
+      console.error("Register failed.")
     }
+    onSignUp({username, email, password, termsAgreed });
   };
 
 
