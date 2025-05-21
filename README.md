@@ -82,8 +82,8 @@ Many people find it tough to discover reliable, well-organized, and exciting onl
 
 3. Create a `.env` file and configure the following variables:
    ```
-   DATABASE_URL = "mysql://user9:HeLRhAU7KttW@cshackathon.sit.kmutt.ac.th:3306/group9_prehack"
-   SHADOW_DATABASE_URL = "mysql://user9:HeLRhAU7KttW@cshackathon.sit.kmutt.ac.th:3306/group9_prehack_shadow"
+   DATABASE_URL = "(Your database URL)"
+   SHADOW_DATABASE_URL = "(Your shadow database URL)"
    JWT_SECRET= (secret)
    ```
 
