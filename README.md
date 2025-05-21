@@ -7,7 +7,11 @@ discuss ecological topics, and collaborate on green initiatives.
 Many people find it tough to discover reliable, well-organized, and exciting online resources dedicated to trees and environmental sustainability. What’s more, there’s a serious lack of interactive spaces where eco-minded individuals can connect, swap stories, and uplift each other’s green goals.
 
 ## :rocket: Getting Started
-**Clone the repository**: bash git clone https://github.com/CSC105-2024/G09-Project-Canopy-Connect-PreHack-2025.git cd G09-Project-Canopy_Connect-PreHack-2025
+**Clone the repository**: 
+```bash 
+ git clone https://github.com/CSC105-2024/G09-Project-Canopy-Connect-PreHack-2025.git 
+ cd G09-Project-Canopy_Connect-PreHack-2025
+```
 
 ## :hammer: Frontend - React
 
@@ -80,7 +84,7 @@ Many people find it tough to discover reliable, well-organized, and exciting onl
    ```
    DATABASE_URL = "mysql://user9:HeLRhAU7KttW@cshackathon.sit.kmutt.ac.th:3306/group9_prehack"
    SHADOW_DATABASE_URL = "mysql://user9:HeLRhAU7KttW@cshackathon.sit.kmutt.ac.th:3306/group9_prehack_shadow"
-   JWT_SECRET=mySuperSecretKey123
+   JWT_SECRET= (secret)
    ```
 
 4. Start the development server:
