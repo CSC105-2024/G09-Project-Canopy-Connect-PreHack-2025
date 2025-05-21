@@ -16,7 +16,7 @@ Many people find it tough to discover reliable, well-organized, and exciting onl
 - React
 - Axios
 - React Router DOM
-- Tailwind CSS / Bootstrap / styled-components _(choose one)_
+- Tailwind CSS
 - Other dependencies...
 
 ### :rocket: Getting Started - React Client
