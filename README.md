@@ -45,9 +45,10 @@ Many people find it tough to discover reliable, well-organized, and exciting onl
 ### :hammer_and_wrench: Tech Stack
 
 - Node.js
-- Express.js
 - MySQL 
-- Other dependencies...
+- JWT (JSON Web Token)
+- bcrypt
+- Cookies
 
 ### :electric_plug: API Endpoints
 
