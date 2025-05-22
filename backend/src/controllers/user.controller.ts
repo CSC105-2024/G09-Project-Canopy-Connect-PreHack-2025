@@ -32,12 +32,15 @@ const createUser = async(c:Context) => {
 const updateProfile = async(c:Context) => {
     try {
         const body = await c.req.json();
-        const USER = c.get("user"); // if something's wrong debug this line
+        const USER = c.get("user"); 
         const userId = USER.id;
         if(!userId || !body.profile){
             return c.json({
                 error: "Missing id or profile url."
             },400);
+        }
+        if (!body.profile || typeof body.profile !== 'string') {
+            return c.json({ error: "Missing or invalid profile URL." }, 400);
         }
         //find user by userID
         const user = await userModel.getUserById(userId);
@@ -154,7 +157,10 @@ const updatePassword = async (c: Context) => {
         }
         const isMatch = await bcrypt.compare(currentPassword, foundUser.password);
         if (!isMatch) {
-            return c.json({ error: "Current password is incorrect." }, 401);
+            return c.json({ 
+                error: "Current password is incorrect.",
+                isMatch: false,
+            }, 401);
         }
         await userModel.updatePassword(userId, newPassword);
         return c.json({ message: "Password updated successfully." });
@@ -175,9 +181,9 @@ const updateEmail = async(c:Context) => {
                 error: "New email is required."
             },400)
         }
-        const updateUser = await userModel.updateUsername(userId,body.newUsername);
+        const updateUser = await userModel.updateEmail(userId,body.newEmail);
         return c.json({
-            message: "Username updated successfully.",
+            message: "Email updated successfully.",
             user: {
                 id: updateUser.id,
                 email: updateUser.email
@@ -214,7 +220,7 @@ const decodeCookie = async(c:Context)=> {
     const token = c.req.header('cookie')?.match(/userToken=([^;]+)/)?.[1];
     if (!token) return c.json({ loggedIn: false }, 200);
 
-    const payload = verifyToken(token); // function ของคุณสำหรับตรวจ JWT
+    const payload = verifyToken(token); 
     if (!payload) return c.json({ loggedIn: false }, 200);
 
     const user = await userModel.getUserInfo(payload.id);
@@ -222,7 +228,7 @@ const decodeCookie = async(c:Context)=> {
 
     return c.json({
       loggedIn: true,
-      user: { id: user.id, username: user.username, profile: user.profile },
+      user: { id: user.id, username: user.username, profile: user.profile, email:user.email },
     }, 200);
       
   } catch {

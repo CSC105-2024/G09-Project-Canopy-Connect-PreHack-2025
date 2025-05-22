@@ -158,10 +158,13 @@ export const Useredit = () => {
   const navigate = useNavigate();
 
   const [currentUserData, setCurrentUserData] = useState({
+    id: null,
     username: "",
     email: "",
     avatarUrl: "usericon60px.png",
+    isLoggedIn: true,
   });
+
 
   const [usernameInput, setUsernameInput] = useState(currentUserData.username);
   const [emailInput, setEmailInput] = useState(currentUserData.email);
@@ -180,24 +183,28 @@ export const Useredit = () => {
 
   // Effect to update form fields if currentUserData changes (e.g., from global state)
   
-  useEffect(() => {
-  const fetchData = async () => {
-    try {
-      const userData = await fetchCurrentUser(); // make sure this returns the correct shape
-      setCurrentUserData(userData);
-      setUsernameInput(userData.username || '');
-      setEmailInput(userData.email || '');
-      setAvatarPreview(userData.avatarUrl || '/usericon60px.png');
-    } catch (error) {
-      console.error("Error fetching user data:", error);
-      setIsUserLoggedIn(false);
-    }
-  };
-
-  fetchData();
-  }, []);
-
-  
+  useEffect(()=> {
+    const checkAuth = async() => {
+      try {
+        const data = await fetchCurrentUser();
+        if(data.loggedIn && data.user) {
+          setCurrentUserData({
+            id: data.user.id,
+            username: data.user.username,
+            email: data.user.email,
+            avatarUrl: data.user.profile_picture || data.user.profile || "usericon60px.png",
+          })
+        } else {
+          console.log("User data not found")
+        }
+      } catch (error) {
+        console.log(error)
+        throw error;
+      }
+    };
+    checkAuth();
+  },[]);
+ 
 
   const handleActualLogout = async () => {
     await logoutUser(); // assuming logoutUser exists
@@ -206,65 +213,77 @@ export const Useredit = () => {
     navigate("/");
   };
   
-  const handleAvatarChange = (e) => {
+  const handleAvatarChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) { // 2MB size limit
-        alert("File is too large. Max size is 2MB.");
-        e.target.value = null; // Reset file input
+      if (file.size > 5 * 1024 * 1024) {
+        alert("File is too large. Max size is 5MB.");
+        e.target.value = null;
         return;
       }
-      if (!['image/jpeg', 'image/png', 'image/gif'].includes(file.type)) {
-        alert("Invalid file type. Must be JPEG, PNG, or GIF.");
-        e.target.value = null; // Reset file input
+      if (!['image/jpeg', 'image/png'].includes(file.type)) {
+        alert("Invalid file type. Must be JPEG or PNG.");
+        e.target.value = null;
         return;
       }
-      
-      setAvatarFile(file); // Store the file object
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const newAvatarDataUrl = reader.result;
-        setAvatarPreview(newAvatarDataUrl); // Update preview immediately
 
-        // Simulate immediate update
-        console.log("New profile picture selected:", file.name);
-        // In a real app, you'd initiate an API call here to upload file.
-        // On success, the backend would return the new URL, or you'd confirm.
-        // For simulation, we directly update our mock currentUserData.
-        setCurrentUserData(prev => ({...prev, avatarUrl: newAvatarDataUrl}));
-        alert("Profile picture updated!");
+      setAvatarFile(file);
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const newAvatarDataUrl = reader.result;
+        setAvatarPreview(newAvatarDataUrl);
+
+        try {
+          await updateProfile(newAvatarDataUrl);
+          setCurrentUserData(prev => ({ ...prev, avatarUrl: newAvatarDataUrl }));
+          alert("Profile picture updated!");
+        } catch (err) {
+          alert("Failed to update profile picture.");
+          console.error(err);
+        }
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleRemoveAvatar = () => {
+
+  const handleRemoveAvatar = async () => {
+    const defaultAvatar = "/usericon60px.png"; // your placeholder image path
     setAvatarFile(null);
-    const defaultAvatar = "/usericon60px.png"; // Or your designated placeholder
-    setAvatarPreview(defaultAvatar); 
-    // Simulate immediate update
-    setCurrentUserData(prev => ({...prev, avatarUrl: defaultAvatar}));
-    alert("Profile picture removed/reset to default.");
-    // Reset the file input if it's still holding a value
+    setAvatarPreview(defaultAvatar);
+    try {
+      await updateProfile(defaultAvatar);
+      setCurrentUserData(prev => ({ ...prev, avatarUrl: defaultAvatar }));
+      alert("Profile picture removed.");
+    } catch (err) {
+      alert("Failed to reset profile picture.");
+      console.error(err);
+    }
+
     const fileInput = document.getElementById('avatarUpload');
     if (fileInput) fileInput.value = null;
   };
   
-  const handleUpdateIdentifyingDetails = (e) => {
+  const handleUpdateIdentifyingDetails = async(e) => {
     e.preventDefault();
-    // Basic validation
-    if (!usernameInput.trim() || !emailInput.trim()) {
-        alert("Username and Email cannot be empty.");
-        return;
-    }
+    
     console.log("Updating username to:", usernameInput);
     console.log("Updating email to:", emailInput);
     // API call to update username and email would go here
-    setCurrentUserData(prev => ({...prev, username: usernameInput, email: emailInput}));
+    if(!emailInput){
+      const username = await updateUsername(currentUserData.id,usernameInput);
+      setCurrentUserData(prev => ({...prev, username: username.username}));
+     
+    }else{
+      await updateEmail(currentUserData.id,emailInput);
+      setCurrentUserData(prev => ({...prev, email: emailInput}));
+    }
+    setCurrentUserData(prev => ({...prev,username: usernameInput ,email: emailInput}));
+   
     alert("Identifying details updated!"); // Simulate success
   };
-
-  const handleUpdatePassword = (e) => {
+  
+  const handleUpdatePassword = async(e) => {
     e.preventDefault();
     setPasswordError("");
     if (!currentPassword || !newPassword || !confirmNewPassword) {
@@ -280,8 +299,15 @@ export const Useredit = () => {
       return;
     }
     // API call to update password (verify currentPassword on backend)
-    console.log("Updating password. Current:", currentPassword, "New:", newPassword);
-    alert("Password update simulated!"); // Simulate success
+    try {
+      const userPassword = await updatePassword(currentUserData.id,currentPassword,newPassword);
+    } catch (error) {
+      alert("The current password is not correct.");
+      return;
+    }
+    
+    
+    alert("Password updated!"); // Simulate success
     setCurrentPassword("");
     setNewPassword("");
     setConfirmNewPassword("");
@@ -297,7 +323,7 @@ export const Useredit = () => {
       <Header
         isLoggedIn={isUserLoggedIn}
         userName={currentUserData.username} // Display username from potentially updated data
-        userAvatar={avatarPreview} // Display current avatar preview
+        userAvatar={currentUserData.avatarUrl} // Display current avatar preview
         onLogout={handleActualLogout}
       />
 
@@ -308,7 +334,7 @@ export const Useredit = () => {
           <h2 className="text-xl font-semibold text-gray-700 mb-1 border-b pb-3">Profile Setting</h2>
           <div className="flex flex-col sm:flex-row items-center sm:items-start pt-4 gap-6">
             <img
-              src={avatarPreview}
+              src={currentUserData.avatarUrl}
               alt="Avatar Preview"
               className="w-24 h-24 rounded-full object-cover border-2 border-gray-300"
               onError={(e) => {e.target.onerror = null; e.target.src="https://placehold.co/96x96/cccccc/FFFFFF?text=Ava";}}

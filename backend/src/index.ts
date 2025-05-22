@@ -4,9 +4,10 @@ import dotenv from 'dotenv'
 import { PrismaClient } from './generated/prisma/index.js'
 import { cors } from 'hono/cors'
 import mainRouter from './routes/index.js'
-const app = new Hono()
-export const db = new PrismaClient()
-dotenv.config()
+dotenv.config();
+const app = new Hono();
+export const db = new PrismaClient();
+
 app.use('*',
   cors({
     origin: 'http://localhost:5173',

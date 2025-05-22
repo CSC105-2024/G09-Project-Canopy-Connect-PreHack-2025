@@ -7,16 +7,16 @@ import{ authMiddleware } from "../middlewares/auth.js";
 
 const userRoute = new Hono();
 
-userRoute.post('/register',createUser); // pass
-userRoute.post('/login',loginUser); // pass
+userRoute.post('/register',createUser); 
+userRoute.post('/login',loginUser); 
 //update profile picutre
-userRoute.patch('/updateProfile',authMiddleware,updateProfile);  // pass
+userRoute.patch('/updateProfile',authMiddleware,updateProfile);  
 //update username / password / email
-userRoute.patch('/updateUsername',authMiddleware,updateUsername) // pass 
-userRoute.patch('/updatePassword',authMiddleware,updatePassword) // pass
-userRoute.patch('/updateEmail',updateEmail)
+userRoute.patch('/updateUsername',authMiddleware,updateUsername)  
+userRoute.patch('/updatePassword',authMiddleware,updatePassword)
+userRoute.patch('/updateEmail',authMiddleware,updateEmail)
 //logout
-userRoute.delete('/logout',logoutUser) // pass
+userRoute.delete('/logout',logoutUser) 
 //decode cookie
 userRoute.get('/decodeCookie',decodeCookie);
 export default userRoute

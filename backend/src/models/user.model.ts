@@ -67,7 +67,6 @@ const updatePictureProfile = async (id:number,profileUrl:string) => {
         data: {
             profile:profileUrl
         },
-        select: {id:true,username:true,profile:true,email:true}
     })
 }
 //update email
