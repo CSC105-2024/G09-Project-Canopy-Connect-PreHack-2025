@@ -1,4 +1,4 @@
-import { db } from "../index.js"; // Your Prisma client instance
+import { db } from "../index.js"; 
 import { Prisma } from '../generated/prisma/index.js';
 
 // Interface for creating a post
@@ -17,17 +17,17 @@ export interface LikeUnlikePostInput {
 
 export interface UpdatePostInput {
     content?: string;
-    imageUrls?: string[]; // To replace existing images
-    newFiles?: { name: string; url: string }[]; // To replace existing files
-    linkUrls?: string[]; // To replace existing links
-    tagNames?: string[]; // To replace existing tags
+    imageUrls?: string[]; 
+    newFiles?: { name: string; url: string }[]; 
+    linkUrls?: string[]; 
+    tagNames?: string[]; 
 }
 export interface CreateCommentInput {
     content: string;
     postId: number;
     userId: number;
 }
-// CreatePostModel (existing function)
+// CreatePostModel
 export const CreatePostModel = async (input: CreatePostInput) => {
     const { content, authorId, imageUrls, newFiles, linkUrls, tagNames } = input;
     const newPost = await db.$transaction(async (prisma) => {
@@ -47,7 +47,6 @@ export const CreatePostModel = async (input: CreatePostInput) => {
             },
 
         });
-        // 2. Handle Image URLs
         if (imageUrls && imageUrls.length > 0) {
             await prisma.image.createMany({
                 data: imageUrls.map((url) => ({
@@ -56,7 +55,6 @@ export const CreatePostModel = async (input: CreatePostInput) => {
                 })),
             });
         }
-        // 3. Handle New Files
         if (newFiles && newFiles.length > 0) {
             await prisma.file.createMany({
                 data: newFiles.map((file) => ({
@@ -66,7 +64,6 @@ export const CreatePostModel = async (input: CreatePostInput) => {
                 })),
             });
         }
-        // 4. Handle Link URLs
         if (linkUrls && linkUrls.length > 0) {
             await prisma.link.createMany({
                 data: linkUrls.map((url) => ({
@@ -76,7 +73,6 @@ export const CreatePostModel = async (input: CreatePostInput) => {
             });
         }
 
-        // 5. Handle Tags using connectOrCreate
         if (tagNames && tagNames.length > 0) {
             await prisma.post.update({
                 where: { id: post.id },
@@ -91,7 +87,6 @@ export const CreatePostModel = async (input: CreatePostInput) => {
             });
         }
 
-        // 6. Fetch the created post with its relations
         const resultPost = await prisma.post.findUnique({
             where: { id: post.id },
             include: {
@@ -126,7 +121,6 @@ export const UpdatePostModel = async (id: number, input: UpdatePostInput) => {
             throw error;
         }
 
-        // 2. Prepare data for direct post field updates
         const postUpdateData: Prisma.PostUpdateInput = {};
         if (content !== undefined) {
             postUpdateData.content = content;
@@ -138,7 +132,6 @@ export const UpdatePostModel = async (id: number, input: UpdatePostInput) => {
             });
         }
         if (imageUrls !== undefined) {
-            // Delete existing images for this post
             await prisma.image.deleteMany({ where: { postId: id } });
             if (imageUrls.length > 0) {
                 await prisma.image.createMany({
@@ -150,9 +143,7 @@ export const UpdatePostModel = async (id: number, input: UpdatePostInput) => {
             }
         }
 
-        // 5. Handle New Files (replace existing)
         if (newFiles !== undefined) {
-            // Delete existing files for this post
             await prisma.file.deleteMany({ where: { postId: id } });
             if (newFiles.length > 0) {
                 await prisma.file.createMany({
@@ -165,25 +156,23 @@ export const UpdatePostModel = async (id: number, input: UpdatePostInput) => {
             }
         }
         if (linkUrls !== undefined) {
-            // Delete existing links for this post
             await prisma.link.deleteMany({ where: { postId: id } });
             if (linkUrls.length > 0) {
                 await prisma.link.createMany({
                     data: linkUrls.map((url) => ({
                         url,
-                        postId: id, // Use the post's ID
+                        postId: id,
                     })),
                 });
             }
         }
 
-        // 7. Handle Tags (replace existing using connectOrCreate for new/existing tags)
         if (tagNames !== undefined) {
             await prisma.post.update({
-                where: { id: id }, // Use the post's ID
+                where: { id: id },
                 data: {
                     tags: {
-                        set: [], // Disconnect all existing tags first
+                        set: [], 
                         connectOrCreate: tagNames.map(name => ({
                             where: { name: name },
                             create: { name: name },
@@ -259,7 +248,7 @@ export const CreateCommentModel = async (input: CreateCommentInput) => {
     const { content, postId, userId } = input;
 
     return db.$transaction(async (prisma) => {
-        // 1. Check if the user and post exist (crucial for foreign key constraints)
+        // Check if the user and post exist
         const user = await prisma.user.findUnique({ where: { id: userId } });
         if (!user) {
             throw new Error(`User with ID ${userId} not found. Cannot create comment.`);
@@ -268,15 +257,14 @@ export const CreateCommentModel = async (input: CreateCommentInput) => {
         if (!post) {
             throw new Error(`Post with ID ${postId} not found. Cannot create comment.`);
         }
-
-        // 2. Create the comment
+        // Create the comment
         const newComment = await prisma.comment.create({
             data: {
                 content: content,
                 postId: postId,
                 userId: userId,
             },
-            include: { // Include author details in the returned comment
+            include: { 
                 user: {
                     select: {
                         id: true,
