@@ -1,4 +1,3 @@
-// --- Assume this is in a file like 'controllers/post.controller.ts' ---
 import type { Context } from 'hono';
 import {
     CreatePostModel,
@@ -11,13 +10,12 @@ import {
     type CreatePostInput,
     type UpdatePostInput
 } from '../models/post.model.js';
-import { Prisma } from '../generated/prisma/index.js'; // For Prisma error handling
+import { Prisma } from '../generated/prisma/index.js'; 
 
 // createPost controller
 export const createPost = async (c: Context) => {
     try {
         const body = await c.req.json() as CreatePostInput;
-        // Validation for required fields based on the new CreatePostInput
         if (!body.content || body.authorId === undefined) {
             return c.json({error: 'Missing required fields: content, authorId'}, 400);
         }
@@ -26,12 +24,10 @@ export const createPost = async (c: Context) => {
     } catch (error: any) {
         console.error('Error creating post:', error);
         if (error instanceof Prisma.PrismaClientKnownRequestError) {
-            if (error.code === 'P2003') { // Foreign key constraint failed
-                // This can happen if the authorId provided does not exist in the User table.
+            if (error.code === 'P2003') {
                 return c.json({ error: 'Invalid authorId. Ensure the author exists.' }, 400);
             }
         }
-        // Handle custom error for author not found from CreatePostModel
         if (error.message.includes("Author with ID") && error.message.includes("not found")) {
             return c.json({ error: error.message }, 400); // Or 404
         }
@@ -49,47 +45,40 @@ export const updatePost = async (c: Context) => {
             return c.json({ error: 'Invalid request body: Expected a JSON object.' }, 400);
         }
 
-        // Construct UpdatePostInput more safely, now including optional arrays for related entities
         const updateData: UpdatePostInput = {};
         const potentialBody = rawBody as Record<string, unknown>;
 
-        // Direct fields
         if (potentialBody.content !== undefined) {
             if (typeof potentialBody.content === 'string') {
                 updateData.content = potentialBody.content;
-            } else { /* Optional: return error for wrong type */ }
+            } else {}
         }
 
-        // Related entities: imageUrls
         if (potentialBody.imageUrls !== undefined) {
             if (Array.isArray(potentialBody.imageUrls) && potentialBody.imageUrls.every(item => typeof item === 'string')) {
                 updateData.imageUrls = potentialBody.imageUrls as string[];
-            } else { /* Optional: return error for wrong type */ }
+            } else {  }
         }
 
-        // Related entities: newFiles
         if (potentialBody.newFiles !== undefined) {
             if (Array.isArray(potentialBody.newFiles) && potentialBody.newFiles.every(item =>
                 typeof item === 'object' && item !== null && typeof (item as any).name === 'string' && typeof (item as any).url === 'string'
             )) {
                 updateData.newFiles = potentialBody.newFiles as { name: string; url: string }[];
-            } else { /* Optional: return error for wrong type */ }
+            } else {}
         }
 
-        // Related entities: linkUrls
         if (potentialBody.linkUrls !== undefined) {
             if (Array.isArray(potentialBody.linkUrls) && potentialBody.linkUrls.every(item => typeof item === 'string')) {
                 updateData.linkUrls = potentialBody.linkUrls as string[];
             } else {}
         }
-
-        // Related entities: tagNames
+        =
         if (potentialBody.tagNames !== undefined) {
             if (Array.isArray(potentialBody.tagNames) && potentialBody.tagNames.every(item => typeof item === 'string')) {
                 updateData.tagNames = potentialBody.tagNames as string[];
             } else {}
         }
-
 
         if (!postIdString) {
             return c.json({ error: 'Post ID is required in the URL path.' }, 400);
@@ -121,7 +110,7 @@ export const updatePost = async (c: Context) => {
 };
 
 
-// deletePost controller (existing function)
+// deletePost controller
 export const deletePost = async (c: Context) => {
     try {
         const body = await c.req.json();
@@ -158,8 +147,8 @@ export const deletePost = async (c: Context) => {
 };
 export const createComment = async (c: Context) => {
     try {
-        const postIdString = c.req.param('postId'); // Assuming postId comes from URL parameter
-        const body = await c.req.json() as Partial<CreateCommentInput>; // Use Partial for initial validation
+        const postIdString = c.req.param('postId'); 
+        const body = await c.req.json() as Partial<CreateCommentInput>; 
 
         if (!postIdString) {
             return c.json({ error: 'Post ID is required in the URL path.' }, 400);
@@ -185,15 +174,14 @@ export const createComment = async (c: Context) => {
         };
 
         const newComment = await CreateCommentModel(input);
-        return c.json(newComment, 201); // 201 Created
+        return c.json(newComment, 201);
 
     } catch (error: any) {
         console.error('Error creating comment:', error);
-        if (error.message.includes("not found")) { // Catch specific "not found" errors from the model
+        if (error.message.includes("not found")) {
             return c.json({ error: error.message }, 404);
         }
         if (error instanceof Prisma.PrismaClientKnownRequestError) {
-            // P2003 can happen if userId or postId is invalid foreign key
             if (error.code === 'P2003') {
                 return c.json({ error: 'Invalid user or post ID for comment operation.' }, 400);
             }
