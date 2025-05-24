@@ -1,7 +1,6 @@
-import { db } from "../index.js"; 
+import { db } from "../index.js"; // Your Prisma client instance
 import { Prisma } from '../generated/prisma/index.js';
 
-// Interface for creating a post
 export interface CreatePostInput {
     content: string;
     authorId: number;
@@ -18,7 +17,7 @@ export interface LikeUnlikePostInput {
 export interface UpdatePostInput {
     content?: string;
     imageUrls?: string[]; 
-    newFiles?: { name: string; url: string }[]; 
+    newFiles?: { name: string; url: string }[];
     linkUrls?: string[]; 
     tagNames?: string[]; 
 }
@@ -27,8 +26,20 @@ export interface CreateCommentInput {
     postId: number;
     userId: number;
 }
-// CreatePostModel
-export const CreatePostModel = async (input: CreatePostInput) => {
+const postInclusions = {
+    images: { select: { id: true, url: true } },
+    files: { select: { id: true, name: true, url: true } },
+    links: { select: { id: true, url: true } },
+    tags: { select: { id: true, name: true } },
+    _count: {
+        select: {
+            likes: true,
+            comments: true,
+        },
+    },
+};
+
+const CreatePostModel = async (input: CreatePostInput) => {
     const { content, authorId, imageUrls, newFiles, linkUrls, tagNames } = input;
     const newPost = await db.$transaction(async (prisma) => {
         const author = await prisma.user.findUnique({
@@ -106,13 +117,13 @@ export const CreatePostModel = async (input: CreatePostInput) => {
     return newPost;
 };
 
-export const UpdatePostModel = async (id: number, input: UpdatePostInput) => {
+const UpdatePostModel = async (id: number, input: UpdatePostInput) => {
     const { content, imageUrls, newFiles, linkUrls, tagNames } = input;
-
     return db.$transaction(async (prisma) => {
-
         const existingPost = await prisma.post.findUnique({
             where: { id },
+
+            include: { tags: { select: { id: true, name: true } } }
         });
 
         if (!existingPost) {
@@ -121,50 +132,26 @@ export const UpdatePostModel = async (id: number, input: UpdatePostInput) => {
             throw error;
         }
 
+        const originalTags = existingPost.tags; 
+
         const postUpdateData: Prisma.PostUpdateInput = {};
-        if (content !== undefined) {
-            postUpdateData.content = content;
-        }
+        if (content !== undefined) postUpdateData.content = content;
+
         if (Object.keys(postUpdateData).length > 0) {
-            await prisma.post.update({
-                where: {id},
-                data: postUpdateData,
-            });
-        }
-        if (imageUrls !== undefined) {
-            await prisma.image.deleteMany({ where: { postId: id } });
-            if (imageUrls.length > 0) {
-                await prisma.image.createMany({
-                    data: imageUrls.map((url) => ({
-                        url,
-                        postId: id,
-                    })),
-                });
-            }
+            await prisma.post.update({ where: { id }, data: postUpdateData });
         }
 
+        if (imageUrls !== undefined) {
+            await prisma.image.deleteMany({ where: { postId: id } });
+            if (imageUrls.length > 0) await prisma.image.createMany({ data: imageUrls.map((url) => ({ url, postId: id })) });
+        }
         if (newFiles !== undefined) {
             await prisma.file.deleteMany({ where: { postId: id } });
-            if (newFiles.length > 0) {
-                await prisma.file.createMany({
-                    data: newFiles.map((file) => ({
-                        name: file.name,
-                        url: file.url,
-                        postId: id,
-                    })),
-                });
-            }
+            if (newFiles.length > 0) await prisma.file.createMany({ data: newFiles.map((file) => ({ name: file.name, url: file.url, postId: id }))});
         }
         if (linkUrls !== undefined) {
             await prisma.link.deleteMany({ where: { postId: id } });
-            if (linkUrls.length > 0) {
-                await prisma.link.createMany({
-                    data: linkUrls.map((url) => ({
-                        url,
-                        postId: id,
-                    })),
-                });
-            }
+            if (linkUrls.length > 0) await prisma.link.createMany({ data: linkUrls.map((url) => ({ url, postId: id })) });
         }
 
         if (tagNames !== undefined) {
@@ -172,33 +159,40 @@ export const UpdatePostModel = async (id: number, input: UpdatePostInput) => {
                 where: { id: id },
                 data: {
                     tags: {
-                        set: [], 
+                        set: [],
                         connectOrCreate: tagNames.map(name => ({
                             where: { name: name },
-                            create: { name: name },
-                        })),
-                    },
+                            create: { name: name }
+                        }))
+                    }
                 },
             });
-        }
-        const updatedPost = await prisma.post.findUnique({
-            where: { id },
-            include: {
-                images: true,
-                files: true,
-                links: true,
-                tags: true,
+
+            if (originalTags && originalTags.length > 0) {
+                const newTagNamesSet = new Set(tagNames);
+                for (const originalTag of originalTags) {
+                    const currentTagState = await prisma.tag.findUnique({
+                        where: { id: originalTag.id },
+                        include: { _count: { select: { posts: true } } }
+                    });
+
+                    if (currentTagState && currentTagState._count.posts === 0) {
+                        console.log(`Tag "${originalTag.name}" (ID: ${originalTag.id}) became orphaned during post update. Deleting...`);
+                        await prisma.tag.delete({ where: { id: originalTag.id } });
+                    }
+                }
             }
-        });
-        if (!updatedPost) {
-             throw new Error("Failed to retrieve the post after update.");
         }
+
+        const updatedPost = await prisma.post.findUnique({ where: { id }, include: postInclusions });
+        if (!updatedPost) throw new Error("Failed to retrieve the post after update.");
         return updatedPost;
     });
 };
 
 
-export const DeletePostModel = async (id: number) => {
+
+const DeletePostModel = async (id: number) => {
     return db.$transaction(async (prisma) => {
         const postToDelete = await prisma.post.findUnique({
             where: { id },
@@ -242,13 +236,12 @@ export const DeletePostModel = async (id: number) => {
     });
 };
 
-export const Like = async (postId: number, url: string) => {
+const Like = async (postId: number, url: string) => {
 }
-export const CreateCommentModel = async (input: CreateCommentInput) => {
+const CreateCommentModel = async (input: CreateCommentInput) => {
     const { content, postId, userId } = input;
 
     return db.$transaction(async (prisma) => {
-        // Check if the user and post exist
         const user = await prisma.user.findUnique({ where: { id: userId } });
         if (!user) {
             throw new Error(`User with ID ${userId} not found. Cannot create comment.`);
@@ -257,7 +250,7 @@ export const CreateCommentModel = async (input: CreateCommentInput) => {
         if (!post) {
             throw new Error(`Post with ID ${postId} not found. Cannot create comment.`);
         }
-        // Create the comment
+
         const newComment = await prisma.comment.create({
             data: {
                 content: content,
@@ -278,7 +271,7 @@ export const CreateCommentModel = async (input: CreateCommentInput) => {
     });
 };
 
-export const LikeUnlikePostModel = async (input: LikeUnlikePostInput) => {
+const LikeUnlikePostModel = async (input: LikeUnlikePostInput) => {
     const { userId, postId } = input;
 
     return db.$transaction(async (prisma) => {
@@ -305,3 +298,39 @@ export const LikeUnlikePostModel = async (input: LikeUnlikePostInput) => {
         return { liked: liked, likeCount: likeCount, postId: postId, userId: userId };
     });
 };
+const GetAllPostsModel = async (skip?: number, take?: number) => {
+    return db.post.findMany({
+        skip: skip,
+        take: take,
+        orderBy: {
+            createdAt: 'desc', // Default order: newest first
+        },
+        include: postInclusions,
+    });
+};
+const GetPostsByTagModel = async (tagName: string, skip?: number, take?: number) => {
+    const tag = await db.tag.findUnique({
+        where: { name: tagName },
+    });
+
+    if (!tag) {
+        return null;
+    }
+    return db.post.findMany({
+        where: {
+            tags: {
+                some: {
+                    name: tagName,
+                },
+            },
+        },
+        skip: skip,
+        take: take,
+        orderBy: {
+            createdAt: 'desc',
+        },
+        include: postInclusions,
+    });
+}
+export default {CreatePostModel, UpdatePostModel, DeletePostModel,
+    CreateCommentModel, LikeUnlikePostModel, GetAllPostsModel, GetPostsByTagModel }
