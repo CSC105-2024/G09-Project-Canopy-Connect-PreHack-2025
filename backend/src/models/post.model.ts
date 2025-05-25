@@ -332,5 +332,74 @@ const GetPostsByTagModel = async (tagName: string, skip?: number, take?: number)
         include: postInclusions,
     });
 }
+const GetAllTagsModel = async () => {
+    return db.tag.findMany({
+        include: {
+            _count: {
+                select: { posts: true },
+            },
+        },
+        orderBy: {
+            name: 'asc',
+        },
+    });
+};
+const GetCommentsForPostModel = async (postId: number, skip?: number, take?: number) => {
+
+    const postExists = await db.post.findUnique({
+        where: { id: postId },
+    });
+    if (!postExists) {
+
+        return null;
+    }
+
+    return db.comment.findMany({
+        where: {
+            postId: postId,
+        },
+        orderBy: {
+            createdAt: 'asc',
+        },
+        include: {
+            user: {
+                select: {
+                    id: true,
+                    username: true,
+                    profile: true,
+                },
+            },
+        },
+        skip: skip,
+        take: take,
+    });
+};
+const GetLikesForPostModel = async (postId: number, skip?: number, take?: number) => {
+    const postExists = await db.post.findUnique({
+        where: { id: postId },
+    });
+    if (!postExists) {
+        return null;
+    }
+
+    return db.like.findMany({
+        where: {
+            postId: postId,
+        },
+        include: {
+            user: {
+                select: {
+                    id: true,
+                    username: true,
+                    profile: true,
+                },
+            },
+        },
+        skip: skip,
+        take: take,
+    });
+};
 export default {CreatePostModel, UpdatePostModel, DeletePostModel,
-    CreateCommentModel, LikeUnlikePostModel, GetAllPostsModel, GetPostsByTagModel }
+    CreateCommentModel, LikeUnlikePostModel, GetAllPostsModel, GetPostsByTagModel,
+    GetCommentsForPostModel,GetAllTagsModel,GetLikesForPostModel
+}

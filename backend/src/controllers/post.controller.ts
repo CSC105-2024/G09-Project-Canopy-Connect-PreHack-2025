@@ -10,7 +10,7 @@ import {
 import { Prisma } from '../generated/prisma/index.js'; 
 
 
-export const createPost = async (c: Context) => {
+const createPost = async (c: Context) => {
     try {
         const body = await c.req.json() as CreatePostInput;
   
@@ -33,7 +33,7 @@ export const createPost = async (c: Context) => {
     }
 };
 
-export const updatePost = async (c: Context) => {
+const updatePost = async (c: Context) => {
     try {
         const postIdString = c.req.param('id');
         const rawBody: unknown = await c.req.json();
@@ -62,7 +62,7 @@ export const updatePost = async (c: Context) => {
         return c.json({ error: 'Failed to update post.', details: error.message }, 500);
     }
 };
-export const deletePost = async (c: Context) => {
+const deletePost = async (c: Context) => {
     try {
         const body = await c.req.json();
         const postIdString = body.id;
@@ -96,7 +96,7 @@ export const deletePost = async (c: Context) => {
         return c.json({ error: 'Failed to delete post.', details: error.message || 'Unknown error' }, 500);
     }
 };
-export const createComment = async (c: Context) => {
+const createComment = async (c: Context) => {
     try {
         const postIdString = c.req.param('postId'); // Assuming postId comes from URL parameter
         const body = await c.req.json() as Partial<CreateCommentInput>; // Use Partial for initial validation
@@ -141,7 +141,7 @@ export const createComment = async (c: Context) => {
     }
 };
 
-export const likeUnlikePost = async (c: Context) => {
+const likeUnlikePost = async (c: Context) => {
     try {
         const postIdString = c.req.param('postId');
         const body = await c.req.json();
@@ -170,7 +170,7 @@ export const likeUnlikePost = async (c: Context) => {
         return c.json({ error: 'Failed to like/unlike post.', details: error.message || 'Unknown error' }, 500);
     }
 };
-export const getAllPosts = async (c: Context) => {
+const getAllPosts = async (c: Context) => {
     try {
         const skip = parseInt(c.req.query('skip') || '0', 10);
         const take = parseInt(c.req.query('take') || '10', 10);
@@ -186,7 +186,7 @@ export const getAllPosts = async (c: Context) => {
         return c.json({ error: 'Failed to retrieve posts.', details: error.message }, 500);
     }
 };
-export const getPostsByTag = async (c: Context) => {
+const getPostsByTag = async (c: Context) => {
     try {
         const tagName = c.req.param('tagName');
         const skip = parseInt(c.req.query('skip') || '0', 10);
@@ -211,3 +211,77 @@ export const getPostsByTag = async (c: Context) => {
         return c.json({ error: 'Failed to retrieve posts by tag.', details: error.message }, 500);
     }
 };
+const getAllTags = async (c: Context) => {
+    try {
+        const tags = await postModel.GetAllTagsModel();
+        return c.json(tags, 200);
+    } catch (error: any) {
+        console.error('Error getting all tags:', error);
+        return c.json({ error: 'Failed to retrieve tags.', details: error.message }, 500);
+    }
+};
+const getCommentsForPost = async (c: Context) => {
+    try {
+        const postIdString = c.req.param('postId');
+        const skip = parseInt(c.req.query('skip') || '0', 10);
+        const take = parseInt(c.req.query('take') || '25', 10); // Default to 25 comments
+
+        if (!postIdString) {
+            return c.json({ error: 'Post ID is required in the URL path.' }, 400);
+        }
+        const postId = parseInt(postIdString, 10);
+        if (isNaN(postId)) {
+            return c.json({ error: 'Invalid Post ID format in URL.' }, 400);
+        }
+
+        if (isNaN(skip) || isNaN(take) || skip < 0 || take < 1) {
+            return c.json({ error: 'Invalid pagination parameters: skip must be >= 0, take must be >= 1.' }, 400);
+        }
+
+        const comments = await postModel.GetCommentsForPostModel(postId, skip, take);
+
+        if (comments === null) { // Post not found by the model
+            return c.json({ error: `Post with ID ${postId} not found.` }, 404);
+        }
+
+        return c.json(comments, 200);
+
+    } catch (error: any) {
+        console.error(`Error getting comments for post ${c.req.param('postId')}:`, error);
+        return c.json({ error: 'Failed to retrieve comments.', details: error.message }, 500);
+    }
+};
+const getLikesForPost = async (c: Context) => {
+    try {
+        const postIdString = c.req.param('postId');
+        const skip = parseInt(c.req.query('skip') || '0', 10);
+        const take = parseInt(c.req.query('take') || '25', 10); // Default to 25 likes
+
+        if (!postIdString) {
+            return c.json({ error: 'Post ID is required in the URL path.' }, 400);
+        }
+        const postId = parseInt(postIdString, 10);
+        if (isNaN(postId)) {
+            return c.json({ error: 'Invalid Post ID format in URL.' }, 400);
+        }
+
+        if (isNaN(skip) || isNaN(take) || skip < 0 || take < 1) {
+            return c.json({ error: 'Invalid pagination parameters: skip must be >= 0, take must be >= 1.' }, 400);
+        }
+
+        const likes = await postModel.GetLikesForPostModel(postId, skip, take);
+
+        if (likes === null) { //
+            return c.json({ error: `Post with ID ${postId} not found.` }, 404);
+        }
+
+        return c.json(likes, 200);
+
+    } catch (error: any) {
+        console.error(`Error getting likes for post ${c.req.param('postId')}:`, error);
+        return c.json({ error: 'Failed to retrieve likes.', details: error.message }, 500);
+    }
+};
+export {createPost,updatePost,deletePost,createComment,
+    likeUnlikePost,getAllPosts,getPostsByTag,
+    getAllTags,getCommentsForPost,getLikesForPost }
