@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-
+import { fetchCurrentUser, logoutUser } from "../api/auth";
+import { createPost } from "../api/post"; // all api from post.js will be import here
 const Header = ({ isLoggedIn, userName, userAvatar, onLogout }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -79,7 +80,7 @@ const Header = ({ isLoggedIn, userName, userAvatar, onLogout }) => {
             {dropdownOpen && (
               <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
                 <Link
-                  to="/profile/edit" // You'll need to create this route/page
+                  to="/useredit" // You'll need to create this route/page
                   className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-[#14AE5C]"
                   onClick={() => setDropdownOpen(false)}
                 >
@@ -260,16 +261,40 @@ export const Post = () => { // Renamed from BlogPage to Post to match your main.
 
   // Simulate logged-in user state (in a real app, this comes from AuthContext/global state)
   const [currentUser, setCurrentUser] = useState({
-    name: "Thanaposh",
+    name: null,
     avatar: "/usericon60px.png", // Ensure this image exists in your public folder
   });
   const [isUserLoggedIn, setIsUserLoggedIn] = useState(true); // Blog page assumes logged in
+  
+  useEffect(()=> {
+      const checkAuth = async() => {
+        try {
+          const data = await fetchCurrentUser();
+          if(data.loggedIn && data.user) {
+            setIsUserLoggedIn(true);
+            setCurrentUser({
+              name: data.user.username,
+              avatar: data.user.profile_picture || data.user.profile || "usericon60px.png"
+            });
+          } else {
+            setIsUserLoggedIn(false);
+            setCurrentUser(null);
+          }
+        } catch (error) {
+          setIsUserLoggedIn(false);
+          setCurrentUser(null);
+        }
+      };
+      checkAuth();
+    },[]);
+  
 
-  const handleActualLogout = () => {
+  const handleActualLogout = async() => {
     setIsUserLoggedIn(false);
     setCurrentUser(null);
     // Here you would typically clear tokens, update global auth state, etc.
     alert("You have been logged out.");
+    await logoutUser();
     navigate("/"); // Redirect to homepage after logout
   };
 
