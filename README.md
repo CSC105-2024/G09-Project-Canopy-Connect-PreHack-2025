@@ -56,17 +56,26 @@ Many people find it tough to discover reliable, well-organized, and exciting onl
 
 ### :electric_plug: API Endpoints
 
-| Method | Endpoint             | Description                         |
-|--------|----------------------|-------------------------------------|
-| GET   | `/user/decodeCookie`  | Decode the cookie's JWT token       |
-| POST  | `/user/register`      |Create new user account              |
-| POST  | `/user/login`         | To log in an account                |
-| PATCH | `/user/updateProfile` | Update user's profile               |
-| PATCH | `/user/updateUsername`| Update user's username              |
-| PATCH | `/user/updatePassword`| Update user's password              |
-| PATCH | `/user/updateEmail`   | Update user's email                 |
-| Delete| `/user/logout`        | To logout the account               |
-
+| Method | Endpoint                     | Description                         |
+|--------|------------------------------|-------------------------------------|
+| GET   | `/user/decodeCookie`          | Decode the cookie's JWT token       |
+| POST  | `/user/register`              |Create new user account              |
+| POST  | `/user/login`                 | To log in an account                |
+| PATCH | `/user/updateProfile`         | Update user's profile               |
+| PATCH | `/user/updateUsername`        | Update user's username              |
+| PATCH | `/user/updatePassword`        | Update user's password              |
+| PATCH | `/user/updateEmail`           | Update user's email                 |
+| Delete| `/user/logout`                | To logout the account               |
+| POST  | `/post/CreatePost`	           | Create a new post	                  |
+| POST	 | `/post/:postId/CreateComment`	| Create a new comment on a post	     |
+| POST  |	`/post/:postId/Like`	         | Like or unlike a post	              | 
+| PUT	  | `/post/:id`	                  | Update an existing post	            |
+| DELETE|	`/post/DeletePost`	           | Delete a post	                      |
+| GET   |	`/post/GetPosts`	             | Get all posts	                      |
+| GET	  | `/post/:tagName/GetPostsByTag`| Get posts by a specific tag	        | 
+| GET	  | `/post/:postId/GetComments`	  | Get all comments for a post	        |
+| GET	  | `/post/tags`	                 | Get all available tags	             |
+| GET	  | `/post/:postId/GetLikes`	     | Get all likes for a post	           |
 
 ### :rocket: Getting Started - Node.js Server
 
