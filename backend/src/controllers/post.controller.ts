@@ -254,34 +254,30 @@ const getCommentsForPost = async (c: Context) => {
 const getLikesForPost = async (c: Context) => {
     try {
         const postIdString = c.req.param('postId');
-        const skip = parseInt(c.req.query('skip') || '0', 10);
-        const take = parseInt(c.req.query('take') || '25', 10); // Default to 25 likes
 
         if (!postIdString) {
             return c.json({ error: 'Post ID is required in the URL path.' }, 400);
         }
+
         const postId = parseInt(postIdString, 10);
         if (isNaN(postId)) {
             return c.json({ error: 'Invalid Post ID format in URL.' }, 400);
         }
 
-        if (isNaN(skip) || isNaN(take) || skip < 0 || take < 1) {
-            return c.json({ error: 'Invalid pagination parameters: skip must be >= 0, take must be >= 1.' }, 400);
-        }
+        const likeCount = await postModel.GetLikesForPostModel(postId);
 
-        const likes = await postModel.GetLikesForPostModel(postId, skip, take);
-
-        if (likes === null) { //
+        if (likeCount === null) {
             return c.json({ error: `Post with ID ${postId} not found.` }, 404);
         }
 
-        return c.json(likes, 200);
+        return c.json({ likeCount }, 200);
 
     } catch (error: any) {
         console.error(`Error getting likes for post ${c.req.param('postId')}:`, error);
-        return c.json({ error: 'Failed to retrieve likes.', details: error.message }, 500);
+        return c.json({ error: 'Failed to retrieve like count.', details: error.message }, 500);
     }
 };
+
 export {createPost,updatePost,deletePost,createComment,
     likeUnlikePost,getAllPosts,getPostsByTag,
     getAllTags,getCommentsForPost,getLikesForPost }
