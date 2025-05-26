@@ -91,7 +91,7 @@ export const getCommentsForPostAPI = async (postId) => {
 };
 export const getPostLikeStatusAPI = async (postId) => {
     try {
-        const response = await Axios.get(`/posts/${postId}/GetLikes`);
+        const response = await Axios.get(`/post/${postId}/GetLikes`);
         return response.data;
     }
     catch (error) {
