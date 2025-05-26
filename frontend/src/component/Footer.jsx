@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 export const Footer = () => {
   const handleSmoothScroll = (event, targetId) => {
     event.preventDefault();
@@ -77,3 +79,4 @@ export const Footer = () => {
     </div>
   );
 };
+export default Footer;

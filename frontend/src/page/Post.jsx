@@ -1,486 +1,635 @@
-import React, { useState, useEffect, useRef } from "react";
+// frontend/src/page/Post.jsx
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import {
+  getPostsAPI,
+  getPostsByTagAPI,
+  getAllTagsAPI,
+  createPostAPI,
+  updatePostAPI,
+  likeUnlikePostAPI,      // For like/unlike actions
+  createCommentAPI,
+  deletePostAPI,
+  getCommentsForPostAPI,  // For BlogPostCard fetching its comments
+  getPostLikeStatusAPI    // For BlogPostCard fetching initial like status & count
+} from "../api/postApi";
 import { fetchCurrentUser, logoutUser } from "../api/auth";
-import { createPost } from "../api/post"; // all api from post.js will be import here
-const Header = ({ isLoggedIn, userName, userAvatar, onLogout }) => {
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const dropdownRef = useRef(null);
+import Header from "../component/Header";
+import Footer from "../component/Footer";
+
+// --- BlogPostCard Component ---
+const BlogPostCard = ({post, onLike, onComment, onDelete, onEdit, currentUser,}) => {
+  const {
+    id: postId, authorImage, authorName, createdAt, updatedAt,
+    tags, content, images, links,
+    likeCount: initialLikeCount, // Initial count from the bulk post load
+    commentsCount: initialCommentsCount,
+    authorId,
+  } = post;
+
+  const [showCommentInput, setShowCommentInput] = useState(true);
+  const [showComments, setShowComments] = useState(true);
+  const [commentText, setCommentText] = useState("");
+
+  const [currentLikes, setCurrentLikes] = useState(initialLikeCount || 0);
+  const [currentCommentsCount, setCurrentCommentsCount] = useState(initialCommentsCount || 0);
+
+  const [isLiked, setIsLiked] = useState(false);
+  const [isLoadingLikeStatus, setIsLoadingLikeStatus] = useState(false);
+
+  const [isOptionsMenuOpen, setIsOptionsMenuOpen] = useState(false);
+  const optionsMenuRef = useRef(null);
+
+  const [postComments, setPostComments] = useState([]);
+  const [isLoadingComments, setIsLoadingComments] = useState(false);
+  const [commentsEverFetched, setCommentsEverFetched] = useState(false);
+
+  useEffect(() => {
+    setCurrentLikes(initialLikeCount || 0);
+  }, [initialLikeCount]);
+
+  useEffect(() => {
+    setCurrentCommentsCount(initialCommentsCount || 0);
+  }, [initialCommentsCount]);
+
+  useEffect(() => {
+    const fetchLikeData = async () => {
+      if (currentUser && currentUser.id && postId) {
+        setIsLoadingLikeStatus(true);
+        try {
+          const likeData = await getPostLikeStatusAPI(postId); // Expects { liked: boolean, likeCount: number }
+          setIsLiked(likeData.liked || false);
+          if (typeof likeData.likeCount === 'number') {
+            setCurrentLikes(likeData.likeCount);
+          }
+        } catch (error) {
+          console.error(`Failed to fetch like data for post ${postId}:`, error);
+          setIsLiked(false); // Default on error
+        } finally {
+          setIsLoadingLikeStatus(false);
+        }
+      } else {
+        setIsLiked(false);
+        setIsLoadingLikeStatus(false);
+      }
+    };
+    fetchLikeData();
+  }, [currentUser, postId]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setDropdownOpen(false);
+      if (optionsMenuRef.current && !optionsMenuRef.current.contains(event.target)) {
+        setIsOptionsMenuOpen(false);
       }
     };
-    if (dropdownOpen) {
+    if (isOptionsMenuOpen) {
       document.addEventListener("mousedown", handleClickOutside);
-    } else {
-      document.removeEventListener("mousedown", handleClickOutside);
     }
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [dropdownOpen]);
+  }, [isOptionsMenuOpen]);
 
-  const handleLogoutClick = () => {
-    setDropdownOpen(false);
-    if (onLogout) {
-      onLogout();
+  const fetchPostComments = useCallback(async () => {
+    if (!postId || isLoadingComments) return;
+    setIsLoadingComments(true);
+    try {
+      const fetchedComments = await getCommentsForPostAPI(postId);
+      setPostComments(fetchedComments || []);
+      setCurrentCommentsCount(fetchedComments ? fetchedComments.length : 0);
+      setCommentsEverFetched(true);
+    } catch (error) {
+      console.error(`Error fetching comments for post ${postId}:`, error);
+      setPostComments([]);
+      setCurrentCommentsCount(0);
+      setCommentsEverFetched(true);
+    } finally {
+      setIsLoadingComments(false);
+    }
+  }, [postId]);
+
+  useEffect(() => {
+    if (showComments && postId && !commentsEverFetched) {
+      fetchPostComments();
+    }
+  }, [showComments, postId, commentsEverFetched, fetchPostComments]);
+
+  const handleToggleCommentsAndInput = () => {
+    const willShow = !showComments;
+    setShowComments(willShow);
+    setShowCommentInput(willShow);
+    if (willShow && postId && !commentsEverFetched) {
+      fetchPostComments();
     }
   };
 
-  return (
-    <div className="w-full max-w-[1440px] mx-auto px-[34px] py-5 max-sm:px-[15px]">
-      <header className="flex items-center relative">
-        <Link to="/" className="flex items-center mr-auto">
-          <img
-            src={'/logo.png'}
-            alt="Canopy Green Logo"
-            className="w-[46px] h-[46px]"
-            onError={(e) => { e.target.onerror = null; e.target.src="https://placehold.co/46x46/14AE5C/FFFFFF?text=Logo"; }}
-          />
-          <div className="text-[#14AE5C] text-[32px] font-extrabold ml-2.5">
-            Canopy Green
-          </div>
-        </Link>
-
-        {isLoggedIn ? (
-          <div className="flex items-center gap-3 relative" ref={dropdownRef}>
-            <button
-              onClick={() => setDropdownOpen(!dropdownOpen)}
-              className="flex items-center gap-2 cursor-pointer focus:outline-none p-1 rounded-md hover:bg-gray-100"
-            >
-              <img
-                src={userAvatar || '/usericon60px.png'}
-                alt={`${userName || 'User'}'s avatar`}
-                className="w-[40px] h-[40px] rounded-full object-cover border-2 border-gray-300"
-                onError={(e) => { e.target.onerror = null; e.target.src="https://placehold.co/40x40/cccccc/FFFFFF?text=User"; }}
-              />
-              <span className="text-[#2F6F42] text-lg font-medium max-sm:hidden">
-                {userName || 'User Name'}
-              </span>
-              <svg
-                className={`w-5 h-5 text-[#2F6F42] transition-transform duration-200 ${
-                  dropdownOpen ? "transform rotate-180" : ""
-                }`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M19 9l-7 7-7-7"
-                ></path>
-              </svg>
-            </button>
-
-            {dropdownOpen && (
-              <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
-                <Link
-                  to="/useredit" // You'll need to create this route/page
-                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-[#14AE5C]"
-                  onClick={() => setDropdownOpen(false)}
-                >
-                  Edit Profile
-                </Link>
-                <button
-                  onClick={handleLogoutClick}
-                  className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-[#14AE5C]"
-                >
-                  Logout
-                </button>
-              </div>
-            )}
-          </div>
-        ) : (
-          // This part ideally wouldn't be shown on a blog page that requires login,
-          <div className="flex items-center gap-5 max-sm:hidden">
-            <Link to="/login" className="text-[#2F6F42] text-2xl hover:underline">
-              Login
-            </Link>
-            <Link
-              to="/signup"
-              className="text-white text-2xl bg-[#14AE5C] px-5 py-[3px] border-[3px] border-solid border-[#14AE5C] hover:bg-[#129b52] hover:border-[#129b52] transition-colors rounded-md"
-            >
-              Signup
-            </Link>
-          </div>
-        )}
-      </header>
-    </div>
-  );
-};
-
-// --- Replicated Footer from Homepage.jsx (or import if exported) ---
-const Footer = () => {
-  const handleSmoothScroll = (event, targetId) => {
-    event.preventDefault();
-    const targetElement = document.getElementById(targetId);
-    if (targetElement) {
-      if (window.location.pathname !== '/') {
-        window.location.href = `/#${targetId}`;
-      } else {
-        targetElement.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
-      }
-    } else if (window.location.pathname !== '/') {
-       window.location.href = `/#${targetId}`;
-    }
-  };
-
-  return (
-    <div className="w-full bg-gray-800 text-gray-300 mt-auto"> {/* mt-auto to push to bottom */}
-      <div className="w-full max-w-[1440px] mx-auto">
-        <footer className="px-5 sm:px-[34px] py-10 border-t border-solid border-gray-700">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-8">
-            <div>
-              <h3 className="text-xl font-semibold mb-[15px] text-white">
-                About Canopy Green
-              </h3>
-              <p className="text-base max-w-[259px]">
-                A community dedicated to tree enthusiasts, arborists, and nature
-                lovers from around the world.
-              </p>
-            </div>
-            <div>
-              <h3 className="text-xl font-semibold mb-[15px] text-white">
-                Quick Links
-              </h3>
-              <ul className="space-y-2">
-                <li>
-                  <Link to="/" className="hover:text-[#14AE5C] hover:underline">
-                    Home
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/signup" className="hover:text-[#14AE5C] hover:underline">
-                    Register
-                  </Link>
-                </li>
-                <li>
-                  <a
-                    href="/#how-it-works" // Assuming #how-it-works is on the homepage
-                    onClick={(e) => handleSmoothScroll(e, "how-it-works")}
-                    className="hover:text-[#14AE5C] hover:underline cursor-pointer"
-                  >
-                    How it Works
-                  </a>
-                </li>
-                 <li>
-                  <Link to="/blog" className="hover:text-[#14AE5C] hover:underline">
-                    Blog
-                  </Link>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-xl font-semibold mb-[15px] text-white">
-                Contact Us
-              </h3>
-              <ul className="space-y-2">
-                <li>Email: info@canopygreen.com</li>
-                <li>Phone: (555) 123-4567</li>
-                <li>Address: 123 Nature Way, Forest City, EARTH</li>
-              </ul>
-            </div>
-          </div>
-          <div className="text-center text-sm border-t border-solid border-gray-700 pt-8 mt-8">
-            <p>© {new Date().getFullYear()} Canopy Green. All rights reserved.</p>
-          </div>
-        </footer>
-      </div>
-    </div>
-  );
-};
-const BlogPostCard = ({
-  avatar,
-  username,
-  date,
-  tag,
-  content,
-  image,
-  likes,
-  comments,
-}) => {
-  return (
-    <article className="border bg-white mx-auto my-0 p-5 border-solid border-gray-200 max-sm:p-[15px] rounded-lg shadow-md mb-6">
-      <div className="flex items-center gap-4 mb-4"> {/* Reduced gap slightly */}
-        <img
-          src={avatar}
-          alt={`${username}'s avatar`}
-          className="w-12 h-12 rounded-full object-cover border border-gray-300" /* Smaller avatar for post list */
-          onError={(e) => { e.target.onerror = null; e.target.src="https://placehold.co/48x48/cccccc/FFFFFF?text=User"; }}
-        />
-        <div className="flex flex-col">
-          <span className="text-lg font-semibold text-gray-800">{username}</span>
-          <span className="text-gray-500 text-xs">{date}</span>
-        </div>
-        {tag && (
-            <div className="ml-auto self-start mt-1"> {/* Align tag to the right */}
-                <span className="text-white text-xs sm:text-sm bg-[#2F6F42] px-2 py-0.5 rounded-full">
-                    {tag}
-                </span>
-            </div>
-        )}
-      </div>
-      <div className="mb-4">
-        <p className="text-gray-700 mb-3 whitespace-pre-line text-base">{content}</p> {/* Slightly smaller text */}
-        {image && (
-          <img
-            src={image}
-            alt="Post content"
-            className="w-full max-w-[700px] h-auto block mx-auto my-0 rounded-md shadow mb-3" /* Max width for image */
-            onError={(e) => { e.target.onerror = null; e.target.src="https://placehold.co/700x350/eeeeee/999999?text=Image"; }}
-          />
-        )}
-      </div>
-      <div className="flex justify-between items-center px-0 py-2 border-t border-gray-200 text-sm">
-        <div className="text-gray-500">{likes} Likes</div>
-        <div className="text-gray-500">
-          {comments > 0 ? `${comments} Comments` : "No Comments"}
-        </div>
-      </div>
-      <div className="flex gap-x-4 mt-3">
-          <button className="text-sm text-[#14AE5C] hover:underline p-1">Like</button>
-          <button className="text-sm text-[#14AE5C] hover:underline p-1">Comment</button>
-          <button className="text-sm text-gray-500 hover:text-gray-700 p-1 ml-auto">...</button> {/* More options */}
-      </div>
-    </article>
-  );
-};
-
-
-// --- BlogPage (replaces content of Post.jsx) ---
-export const Post = () => { // Renamed from BlogPage to Post to match your main.jsx
-  const navigate = useNavigate();
-
-  // Simulate logged-in user state (in a real app, this comes from AuthContext/global state)
-  const [currentUser, setCurrentUser] = useState({
-    name: null,
-    avatar: "/usericon60px.png", // Ensure this image exists in your public folder
-  });
-  const [isUserLoggedIn, setIsUserLoggedIn] = useState(true); // Blog page assumes logged in
-  
-  useEffect(()=> {
-      const checkAuth = async() => {
-        try {
-          const data = await fetchCurrentUser();
-          if(data.loggedIn && data.user) {
-            setIsUserLoggedIn(true);
-            setCurrentUser({
-              name: data.user.username,
-              avatar: data.user.profile_picture || data.user.profile || "usericon60px.png"
-            });
-          } else {
-            setIsUserLoggedIn(false);
-            setCurrentUser(null);
+  const handleCommentSubmit = async () => {
+    if (commentText.trim() && currentUser?.id) {
+      try {
+        const newComment = await onComment(postId, commentText, currentUser.id);
+        if (newComment) {
+          setCommentText("");
+          if (showComments) {
+            fetchPostComments(); // Refresh comments list and count
           }
-        } catch (error) {
-          setIsUserLoggedIn(false);
-          setCurrentUser(null);
         }
-      };
-      checkAuth();
-    },[]);
-  
-
-  const handleActualLogout = async() => {
-    setIsUserLoggedIn(false);
-    setCurrentUser(null);
-    // Here you would typically clear tokens, update global auth state, etc.
-    alert("You have been logged out.");
-    await logoutUser();
-    navigate("/"); // Redirect to homepage after logout
+      } catch (error) { /* Parent handles error alerts */ }
+    } else if (!currentUser?.id) {
+      alert("Please log in to comment.");
+    }
   };
 
-
-  const [posts, setPosts] = useState([
-    {
-      id: 1,
-      avatar: "/usericon60px.png",
-      username: "Thanaposh",
-      date: "May 1, 2069", // As per image
-      tag: "Conversation",
-      content: "Just planted this tree in my front yard. it's looking at me like this what do i do?",
-      image: "https://i.ytimg.com/vi/wpWvk5sQyKQ/maxresdefault.jpg", // Placeholder matching image if possible
-      likes: 444,
-      comments: 0,
-      topic: "Conversation",
-    },
-    {
-      id: 2,
-      avatar: "/usericon60px.png",
-      username: "TreeHugger",
-      date: "May 18, 2025",
-      tag: "Gardening",
-      content: "Best season for planting fruit trees? Discuss!",
-      image: null,
-      likes: 152,
-      comments: 12,
-      topic: "Gardening",
-    },
-     {
-      id: 3,
-      avatar: "/usericon60px.png",
-      username: "ForestRanger",
-      date: "May 17, 2025",
-      tag: "Tree Species",
-      content: "Spotted a rare species of Birch today during my hike. Absolutely stunning!",
-      image: "https://placehold.co/800x400/a5a58d/ffffff?text=Rare+Birch",
-      likes: 98,
-      comments: 5,
-      topic: "Tree Species",
-    }
-  ]);
-
-  const [newPostText, setNewPostText] = useState("");
-  const [newPostImage, setNewPostImage] = useState("");
-  const [newPostTag, setNewPostTag] = useState("");
-
-  const [activeFilter, setActiveFilter] = useState("All topics");
-  const topics = ["All topics", "Tree Species", "Gardening", "Conversation"];
-
-
-  const handleCreatePost = (e) => {
-    e.preventDefault();
-    if (!newPostText.trim()) {
-      alert("Post content cannot be empty!");
+  const handleLikeClick = async () => {
+    if (!currentUser?.id) {
+      alert("Please log in to like posts.");
       return;
     }
-    const newPost = {
-      id: Date.now(),
-      avatar: currentUser.avatar,
-      username: currentUser.name,
-      date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-      tag: newPostTag.trim() || "General",
-      content: newPostText.trim(),
-      image: newPostImage.trim() || null,
-      likes: 0,
-      comments: 0,
-      topic: newPostTag.trim() || "General",
-    };
-    setPosts([newPost, ...posts]);
-    setNewPostText("");
-    setNewPostImage("");
-    setNewPostTag("");
+    const previousIsLiked = isLiked;
+    setIsLiked(!previousIsLiked);
+
+    try {
+      const likeResult = await onLike(postId, currentUser.id);
+      if (likeResult && typeof likeResult.liked === 'boolean' && typeof likeResult.likeCount === 'number') {
+        setIsLiked(likeResult.liked);
+        setCurrentLikes(likeResult.likeCount);
+      } else {
+        console.warn("onLike did not return expected like data. Reverting optimistic UI for button state.");
+        setIsLiked(previousIsLiked);
+      }
+    } catch (error) {
+      console.error("Error during like/unlike operation, reverting UI for button state:", error);
+      setIsLiked(previousIsLiked);
+    }
   };
 
-  const filteredPosts = activeFilter === "All topics"
-    ? posts
-    : posts.filter(post => post.topic.toLowerCase() === activeFilter.toLowerCase());
+  const handleDeleteClick = () => {
+    setIsOptionsMenuOpen(false);
+    if (currentUser?.id === authorId) {
+      if (window.confirm("Are you sure you want to delete this post?")) {
+        onDelete(postId);
+      }
+    } else {
+      alert("You can only delete your own posts.");
+    }
+  };
 
-  // If not logged in (e.g., after simulated logout on this page), redirect or show message
-  // This is a basic check; a real app uses routing protection or context.
-  if (!isUserLoggedIn) {
-    navigate('/login'); // Or show a "Please login to view the blog" message
-    return null; // Avoid rendering the rest while redirecting
+  const handleEditClick = () => {
+    setIsOptionsMenuOpen(false);
+    if (currentUser?.id === authorId) {
+      if (onEdit) {
+        onEdit(post);
+      } else {
+        alert("Edit functionality not yet implemented.");
+      }
+    } else {
+      alert("You can only edit your own posts.");
+    }
+  };
+
+  const displayImage = images && images.length > 0 ? images[0].url : null;
+  const displayLink = links && links.length > 0 ? links[0] : null;
+  const canModify = currentUser && currentUser.id === authorId;
+
+  const creationDate = new Date(createdAt);
+  const lastUpdatedDate = new Date(updatedAt);
+  const displayCreationDate = creationDate.toLocaleDateString('en-US', {
+    month: 'long', day: 'numeric', year: 'numeric'
+  });
+  const wasEdited = lastUpdatedDate.getTime() > creationDate.getTime() + 60000; // 1 minute threshold
+  let editedDateString = "";
+  if (wasEdited) {
+    editedDateString = lastUpdatedDate.toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
   }
 
   return (
-    <div className="w-full bg-gray-100 flex flex-col min-h-screen font-sans">
-      <Header
-        isLoggedIn={isUserLoggedIn}
-        userName={currentUser?.name}
-        userAvatar={currentUser?.avatar}
-        onLogout={handleActualLogout}
-      />
-      <main className="flex-grow w-full max-w-[960px] mx-auto px-4 sm:px-6 lg:px-8 py-8"> {/* Adjusted max-width */}
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">Discussion</h1>
-
-        <div className="mb-6 flex flex-wrap gap-2">
-          {topics.map(topic => (
-            <button
-              key={topic}
-              onClick={() => setActiveFilter(topic)}
-              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors
-                ${activeFilter === topic
-                  ? 'bg-[#14AE5C] text-white shadow-sm'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-            >
-              {topic}
-            </button>
-          ))}
+      <article className="border bg-white mx-auto my-0 p-5 border-solid border-gray-200 max-sm:p-[15px] rounded-lg shadow-md mb-6 relative">
+        <div className="flex items-start gap-4 mb-1">
+          <img
+              src={authorImage || '/usericon60px.png'}
+              alt={`${authorName || 'User'}'s avatar`}
+              className="w-12 h-12 rounded-full object-cover border border-gray-300"
+              onError={(e) => { e.target.onerror = null; e.target.src="https://placehold.co/48x48/cccccc/FFFFFF?text=User"; }}
+          />
+          <div className="flex-grow">
+            <div className="flex flex-col">
+              <span className="text-lg font-semibold text-gray-800">{authorName || 'Author'}</span>
+              <div className="text-xs text-gray-500">
+                <span>{displayCreationDate}</span>
+                {wasEdited && <span className="ml-1 text-gray-400 italic">(edited {editedDateString})</span>}
+              </div>
+            </div>
+          </div>
+          {canModify && (
+              <div className="relative" ref={optionsMenuRef}>
+                <button
+                    onClick={() => setIsOptionsMenuOpen(!isOptionsMenuOpen)}
+                    className="p-2 rounded-full hover:bg-gray-100 focus:outline-none"
+                    aria-label="Post options"
+                >
+                  <svg className="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                  </svg>
+                </button>
+                {isOptionsMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-36 bg-white rounded-md shadow-lg py-1 z-10 border border-gray-200">
+                      <button onClick={handleEditClick} className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-[#14AE5C]">Edit Post</button>
+                      <button onClick={handleDeleteClick} className="w-full text-left block px-4 py-2 text-sm text-red-500 hover:bg-gray-100 hover:text-red-700">Delete Post</button>
+                    </div>
+                )}
+              </div>
+          )}
         </div>
 
-        <div className="bg-white p-5 rounded-lg shadow-md mb-8">
+        {tags && tags.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-1 self-start">
+              {tags.map(tag => (<span key={tag.id || tag.name} className="text-white text-xs sm:text-sm bg-[#2F6F42] px-2 py-0.5 rounded-full">{tag.name}</span>))}
+            </div>
+        )}
+        {(!tags || tags.length === 0) && (<div className="mb-2 self-start"><span className="text-white text-xs sm:text-sm bg-[#2F6F42] px-2 py-0.5 rounded-full">General</span></div>)}
+
+        <div className="mb-4">
+          <p className="text-gray-700 mb-3 whitespace-pre-line text-base">{content}</p>
+          {displayImage && (<img src={displayImage} alt="Post content" className="w-full max-w-[700px] h-auto block mx-auto my-0 rounded-md shadow mb-3" onError={(e) => { e.target.onerror = null; e.target.src="https://placehold.co/700x350/eeeeee/999999?text=Image+Error"; }} />)}
+          {displayLink && displayLink.url && (<div className="mt-2"><a href={displayLink.url.startsWith('http') ? displayLink.url : `//${displayLink.url}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:text-blue-600 hover:underline break-all">{displayLink.url}</a></div>)}
+        </div>
+        <div className="flex justify-between items-center px-0 py-2 border-t border-gray-200 text-sm">
+          <div className="text-gray-500">{currentLikes} Likes</div>
+          <div className="text-gray-500">{currentCommentsCount > 0 ? `${currentCommentsCount} Comments` : "No Comments"}</div>
+        </div>
+        <div className="flex gap-x-4 mt-3 items-center">
+          <button
+              onClick={handleLikeClick}
+              className={`text-sm p-1 hover:underline ${isLiked ? 'text-red-600 font-semibold' : 'text-[#14AE5C]'} ${isLoadingLikeStatus ? 'opacity-50 cursor-default' : ''}`}
+              disabled={isLoadingLikeStatus}
+              aria-pressed={isLiked}
+          >
+            {isLoadingLikeStatus ? "..." : (isLiked ? "Unlike" : "Like")}
+          </button>
+          <button onClick={handleToggleCommentsAndInput} className="text-sm text-[#14AE5C] hover:underline p-1">
+            {showComments ? "Hide Comments" : `Show Comments (${currentCommentsCount || 0})`}
+          </button>
+        </div>
+
+        {showCommentInput && (
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <h4 className="text-sm font-semibold text-gray-700 mb-2">Write a comment</h4>
+              <textarea value={commentText} onChange={(e) => setCommentText(e.target.value)} placeholder="Share your thoughts..." className="w-full p-2 border border-gray-300 rounded-md text-sm" rows="3" />
+              <button onClick={handleCommentSubmit} className="mt-2 bg-[#14AE5C] hover:bg-[#129b52] text-white font-semibold py-1.5 px-3 rounded-md text-xs">Post Comment</button>
+            </div>
+        )}
+        {showComments && (
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <h4 className="text-sm font-semibold text-gray-700 mb-3">Comments ({currentCommentsCount})</h4>
+              {isLoadingComments && <p className="text-gray-500 text-xs">Loading comments...</p>}
+              {!isLoadingComments && postComments.length === 0 && commentsEverFetched && (<p className="text-gray-500 text-xs">No comments found, or an error occurred while loading.</p>)}
+              {!isLoadingComments && postComments.length === 0 && !commentsEverFetched && (<p className="text-gray-500 text-xs">Preparing to load comments...</p>)}
+              {!isLoadingComments && postComments.length > 0 && (
+                  <ul className="space-y-3">
+                    {postComments.map((comment) => (
+                        <li key={comment.id} className="flex items-start space-x-3">
+                          <img src={comment.user?.profile || '/usericon60px.png'} alt={`${comment.user?.username || 'User'}'s avatar`} className="w-8 h-8 rounded-full object-cover border border-gray-200" onError={(e) => { e.target.onerror = null; e.target.src="https://placehold.co/32x32/cccccc/FFFFFF?text=U"; }} />
+                          <div className="flex-1 bg-gray-50 p-2.5 rounded-md">
+                            <div className="flex items-center justify-between mb-0.5">
+                              <span className="text-xs font-semibold text-gray-800">{comment.user?.username || 'Anonymous User'}</span>
+                              <span className="text-xs text-gray-400">{new Date(comment.createdAt).toLocaleDateString()}</span>
+                            </div>
+                            <p className="text-xs text-gray-600 whitespace-pre-line">{comment.content}</p>
+                          </div>
+                        </li>
+                    ))}
+                  </ul>
+              )}
+            </div>
+        )}
+      </article>
+  );
+};
+
+// --- EditPostModal Component ---
+const EditPostModal = ({ isOpen, onClose, postToEdit, onUpdatePost, currentUser }) => {
+  const [editedContent, setEditedContent] = useState("");
+  const [editedImage, setEditedImage] = useState("");
+  const [editedTagsString, setEditedTagsString] = useState("");
+  const [editedLinkUrl, setEditedLinkUrl] = useState("");
+
+  useEffect(() => {
+    if (postToEdit) {
+      setEditedContent(postToEdit.content || "");
+      setEditedImage(postToEdit.images && postToEdit.images.length > 0 ? postToEdit.images[0].url : "");
+      setEditedTagsString(postToEdit.tags && postToEdit.tags.length > 0 ? postToEdit.tags.map(tag => tag.name).join(', ') : "");
+      setEditedLinkUrl(postToEdit.links && postToEdit.links.length > 0 ? postToEdit.links[0].url : "");
+    }
+  }, [postToEdit]);
+
+  if (!isOpen || !postToEdit) return null;
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!editedContent.trim()) {
+      alert("Post content cannot be empty!");
+      return;
+    }
+    const tagNamesArray = editedTagsString.split(',').map(tag => tag.trim()).filter(tag => tag !== "");
+    const updatedData = {
+      content: editedContent.trim(),
+      imageUrls: editedImage.trim() ? [editedImage.trim()] : [],
+      tagNames: tagNamesArray.length > 0 ? tagNamesArray : [],
+      linkUrls: editedLinkUrl.trim() ? [editedLinkUrl.trim()] : [],
+    };
+    onUpdatePost(postToEdit.id, updatedData);
+  };
+
+  return (
+      <div className="fixed inset-0 bg-gray-600 bg-opacity-75 overflow-y-auto h-full w-full z-50 flex justify-center items-center p-4">
+        <div className="relative p-6 border w-full max-w-lg shadow-xl rounded-lg bg-white">
+          <h3 className="text-xl font-semibold text-gray-800 mb-6">Edit Post</h3>
           <div className="flex items-start gap-3">
-            <img
-              src={currentUser.avatar}
-              alt="Your avatar"
-              className="w-10 h-10 rounded-full object-cover"
-              onError={(e) => { e.target.onerror = null; e.target.src="https://placehold.co/40x40/cccccc/FFFFFF?text=Me"; }}
-            />
-            <form onSubmit={handleCreatePost} className="flex-grow">
-              <textarea
-                value={newPostText}
-                onChange={(e) => setNewPostText(e.target.value)}
-                placeholder="What's on your mind about trees today?"
-                className="w-full p-3 border border-gray-300 rounded-md resize-none focus:ring-1 focus:ring-[#14AE5C] focus:border-transparent text-sm"
-                rows="3"
-              ></textarea>
-              <div className="flex flex-wrap gap-x-3 gap-y-2 mt-2 items-center text-sm">
-                 {/* Icons for add photo, link, tag */}
+            {currentUser && (<img src={currentUser.avatar} alt="Your avatar" className="w-10 h-10 rounded-full object-cover" onError={(e) => { e.target.onerror = null; e.target.src="https://placehold.co/40x40/cccccc/FFFFFF?text=Me"; }} />)}
+            <form onSubmit={handleSubmit} className="flex-grow">
+              <textarea value={editedContent} onChange={(e) => setEditedContent(e.target.value)} placeholder="What's on your mind about trees today?" className="w-full p-3 border border-gray-300 rounded-md resize-none focus:ring-1 focus:ring-[#14AE5C] focus:border-transparent text-sm" rows="4"></textarea>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2 mt-3 items-center text-sm">
                 <div className="flex items-center">
-                  <svg className="w-5 h-5 text-gray-500 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd"></path></svg>
-                  <input
-                    type="text"
-                    value={newPostImage}
-                    onChange={(e) => setNewPostImage(e.target.value)}
-                    placeholder="Add Photo URL"
-                    className="flex-grow p-1 border border-gray-300 rounded-md text-xs focus:ring-1 focus:ring-[#14AE5C] w-full sm:w-auto"
-                  />
+                  <svg className="w-5 h-5 text-gray-500 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd"></path></svg>
+                  <input type="text" value={editedImage} onChange={(e) => setEditedImage(e.target.value)} placeholder="Update Photo URL" className="flex-grow p-1.5 border border-gray-300 rounded-md text-xs focus:ring-1 focus:ring-[#14AE5C] w-full" />
                 </div>
                 <div className="flex items-center">
-                   <svg className="w-5 h-5 text-gray-500 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h10a3 3 0 013 3v5a.997.997 0 01-.293-.707zM11 5a1 1 0 10-2 0v3H7a1 1 0 100 2h2v3a1 1 0 102 0v-3h2a1 1 0 100-2h-2V5z" clipRule="evenodd"></path></svg>
-                  <input
-                    type="text"
-                    value={newPostTag}
-                    onChange={(e) => setNewPostTag(e.target.value)}
-                    placeholder="Add Tag"
-                    className="flex-grow p-1 border border-gray-300 rounded-md text-xs focus:ring-1 focus:ring-[#14AE5C] w-full sm:w-auto"
-                  />
+                  <svg className="w-5 h-5 text-gray-500 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h10a3 3 0 013 3v5a.997.997 0 01-.293-.707zM11 5a1 1 0 10-2 0v3H7a1 1 0 100 2h2v3a1 1 0 102 0v-3h2a1 1 0 100-2h-2V5z" clipRule="evenodd"></path></svg>
+                  <input type="text" value={editedTagsString} onChange={(e) => setEditedTagsString(e.target.value)} placeholder="Update Tags (comma-separated)" className="flex-grow p-1.5 border border-gray-300 rounded-md text-xs focus:ring-1 focus:ring-[#14AE5C] w-full" />
+                </div>
+                <div className="flex items-center sm:col-span-2">
+                  <svg className="w-5 h-5 text-gray-500 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M12.232 4.232a2.5 2.5 0 013.536 3.536l-1.225 1.224a.75.75 0 001.061 1.06l1.224-1.224a4 4 0 00-5.656-5.656l-3 3a4 4 0 00.225 5.865.75.75 0 00.976-1.138 2.5 2.5 0 01-.142-3.667l3-3z"></path><path d="M8.603 14.97a2.5 2.5 0 01-3.535-3.536l1.225-1.224a.75.75 0 00-1.061-1.06l-1.224 1.224a4 4 0 005.656 5.656l3-3a4 4 0 00-.225-5.865.75.75 0 00-.976 1.138 2.5 2.5 0 01.142 3.667l-3 3z"></path></svg>
+                  <input type="url" value={editedLinkUrl} onChange={(e) => setEditedLinkUrl(e.target.value)} placeholder="Update Link URL (optional)" className="flex-grow p-1.5 border border-gray-300 rounded-md text-xs focus:ring-1 focus:ring-[#14AE5C] w-full" />
                 </div>
               </div>
-              <div className="mt-3 flex justify-end">
-                <button
-                  type="submit"
-                  className="bg-[#14AE5C] hover:bg-[#129b52] text-white font-semibold py-1.5 px-4 rounded-md text-sm transition-colors"
-                >
-                  Post
-                </button>
+              <div className="mt-6 flex justify-end space-x-3">
+                <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-200 text-gray-800 text-sm font-medium rounded-md shadow-sm hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400">Cancel</button>
+                <button type="submit" className="px-4 py-2 bg-[#14AE5C] hover:bg-[#129b52] text-white text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#14AE5C]">Save Changes</button>
               </div>
             </form>
           </div>
         </div>
-
-        <div>
-          {filteredPosts.length > 0 ? (
-            filteredPosts.map(post => (
-              <BlogPostCard
-                key={post.id}
-                avatar={post.avatar}
-                username={post.username}
-                date={post.date}
-                tag={post.tag}
-                content={post.content}
-                image={post.image}
-                likes={post.likes}
-                comments={post.comments}
-              />
-            ))
-          ) : (
-            <p className="text-center text-gray-500 py-10">No posts found for "{activeFilter}".</p>
-          )}
-        </div>
-      </main>
-      <Footer />
-    </div>
+      </div>
   );
 };
+
+// --- Post Component (Main Page Logic) ---
+export const Post = () => {
+  const navigate = useNavigate();
+  const [currentUser, setCurrentUser] = useState(null);
+  const [isUserLoggedIn, setIsUserLoggedIn] = useState(false);
+  const [posts, setPosts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const [newPostText, setNewPostText] = useState("");
+  const [newPostImage, setNewPostImage] = useState("");
+  const [newPostTagsString, setNewPostTagsString] = useState("");
+  const [newPostLinkUrl, setNewPostLinkUrl] = useState("");
+
+  const [activeFilter, setActiveFilter] = useState("All topics");
+  const [availableTopics, setAvailableTopics] = useState([{ name: "All topics", count: 0 }]);
+
+  const [editingPost, setEditingPost] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const userData = await fetchCurrentUser();
+        if (userData && userData.user && userData.user.id) {
+          setCurrentUser({
+            id: userData.user.id,
+            name: userData.user.username,
+            avatar: userData.user.profile || "/usericon60px.png",
+          });
+          setIsUserLoggedIn(true);
+        } else {
+          setIsUserLoggedIn(false);
+          setCurrentUser(null);
+        }
+      } catch (error) {
+        console.error("Auth Error: Failed to fetch current user.", error);
+        setIsUserLoggedIn(false);
+        setCurrentUser(null);
+      }
+    };
+    loadUser();
+  }, []);
+
+  useEffect(() => {
+    const fetchTags = async () => {
+      try {
+        const fetchedTags = await getAllTagsAPI();
+        setAvailableTopics([{ name: "All topics", count: 0 }, ...(fetchedTags || [])]);
+      } catch (error) {
+        console.error("Failed to fetch tags:", error);
+        setAvailableTopics([{ name: "All topics", count: 0 }]);
+      }
+    };
+    fetchTags();
+  }, []);
+
+  useEffect(() => {
+    const fetchPosts = async () => {
+      setIsLoading(true);
+      try {
+        let fetchedPostsData;
+        if (activeFilter === "All topics") {
+          fetchedPostsData = await getPostsAPI();
+        } else {
+          fetchedPostsData = await getPostsByTagAPI(activeFilter);
+        }
+        const processedPosts = (fetchedPostsData || []).map(p => ({
+          ...p,
+          createdAt: p.createdAt ? new Date(p.createdAt).toISOString() : new Date().toISOString(),
+          updatedAt: p.updatedAt ? new Date(p.updatedAt).toISOString() : new Date().toISOString(),
+          likeCount: typeof p.likeCount === 'number' ? p.likeCount : 0,
+          commentsCount: typeof p.commentsCount === 'number' ? p.commentsCount : 0,
+        }));
+        setPosts(processedPosts);
+      } catch (error) {
+        console.error(`Failed to fetch posts for filter "${activeFilter}":`, error);
+        setPosts([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchPosts();
+  }, [activeFilter, currentUser]);
+
+  const handleActualLogout = async () => {
+    try {
+      await logoutUser();
+      setIsUserLoggedIn(false);
+      setCurrentUser(null);
+      setActiveFilter("All topics");
+      alert("You have been logged out.");
+      navigate("/");
+    } catch (error) {
+      console.error("Logout failed:", error);
+      alert("Logout failed. Please try again.");
+    }
+  };
+
+  const handleCreatePost = async (e) => {
+    e.preventDefault();
+    if (!newPostText.trim()) { alert("Post content cannot be empty!"); return; }
+    if (!currentUser?.id) { alert("You must be logged in to create a post."); navigate("/login"); return; }
+    const tagNamesArray = newPostTagsString.split(',').map(tag => tag.trim()).filter(tag => tag !== "");
+    const postData = {
+      content: newPostText.trim(), authorId: currentUser.id,
+      imageUrls: newPostImage.trim() ? [newPostImage.trim()] : [],
+      tagNames: tagNamesArray.length > 0 ? tagNamesArray : [],
+      linkUrls: newPostLinkUrl.trim() ? [newPostLinkUrl.trim()] : [],
+    };
+    try {
+      const createdPostFromAPI = await createPostAPI(postData);
+      const newPostForState = {
+        ...createdPostFromAPI,
+        createdAt: createdPostFromAPI.createdAt ? new Date(createdPostFromAPI.createdAt).toISOString() : new Date().toISOString(),
+        updatedAt: createdPostFromAPI.updatedAt ? new Date(createdPostFromAPI.updatedAt).toISOString() : new Date().toISOString(),
+        likeCount: createdPostFromAPI.likeCount !== undefined ? createdPostFromAPI.likeCount : 0,
+        commentsCount: createdPostFromAPI.commentsCount !== undefined ? createdPostFromAPI.commentsCount : 0,
+        authorName: currentUser.name,
+        authorImage: currentUser.avatar,
+      };
+      setPosts([newPostForState, ...posts]);
+      setNewPostText(""); setNewPostImage(""); setNewPostTagsString(""); setNewPostLinkUrl("");
+    } catch (error) {
+      console.error("Failed to create post", error);
+      alert(`Error creating post: ${error?.error || 'Please try again.'}`);
+    }
+  };
+
+  const handleLikePost = async (postId, userId) => {
+    if (!userId) {
+      alert("Please log in to like a post.");
+      throw new Error("User not logged in to like.");
+    }
+    try {
+      const result = await likeUnlikePostAPI(postId, userId); // Expects { likeCount: number, liked: boolean }
+      setPosts(prevPosts => prevPosts.map(p =>
+          p.id === postId ? { ...p, likeCount: result.likeCount } : p
+      ));
+      return { liked: result.liked, likeCount: result.likeCount }; // Return full result
+    } catch (error) {
+      console.error("Failed to like/unlike post in Post.jsx:", error);
+      alert(`Error liking/unliking post: ${error?.error || 'Please try again.'}`);
+      throw error;
+    }
+  };
+
+  const handleCreateComment = async (postId, commentContent, userId) => {
+    if (!userId) { alert("Please log in to comment."); navigate("/login"); throw new Error("User not logged in"); }
+    try {
+      const newCommentData = await createCommentAPI(postId, { content: commentContent, userId: userId });
+      // The count on the parent post object is just an estimate; BlogPostCard will re-fetch and get definitive count.
+      // However, incrementing it here helps if BlogPostCard relies on it for the "Show Comments (X)" text before re-fetch.
+      setPosts(prevPosts => prevPosts.map(p =>
+          p.id === postId ? { ...p, commentsCount: (p.commentsCount || 0) + 1 } : p
+      ));
+      return newCommentData;
+    } catch (error) {
+      console.error("Failed to create comment from Post.jsx:", error);
+      alert(`Error creating comment: ${error?.error || 'Please try again.'}`);
+      throw error;
+    }
+  };
+
+  const handleDeletePost = async (postId) => {
+    if (!currentUser?.id) { alert("You must be logged in to delete a post."); navigate("/login"); return; }
+    try {
+      await deletePostAPI(postId);
+      setPosts(posts.filter(p => p.id !== postId));
+      alert("Post deleted successfully.");
+    } catch (error) {
+      console.error("Failed to delete post:", error);
+      alert(`Error deleting post: ${error?.error || 'Please try again.'}`);
+    }
+  };
+
+  const handleEditPostTrigger = (postToEdit) => {
+    setEditingPost(postToEdit);
+    setShowEditModal(true);
+  };
+
+  const handleUpdatePostSubmit = async (postId, updatedData) => {
+    if (!currentUser?.id) { alert("You must be logged in to update a post."); return; }
+    try {
+      const updatedPostFromAPI = await updatePostAPI(postId, updatedData);
+      setPosts(prevPosts => prevPosts.map(p =>
+          p.id === postId ? {
+            ...p,
+            ...updatedPostFromAPI,
+            createdAt: updatedPostFromAPI.createdAt ? new Date(updatedPostFromAPI.createdAt).toISOString() : p.createdAt,
+            updatedAt: updatedPostFromAPI.updatedAt ? new Date(updatedPostFromAPI.updatedAt).toISOString() : new Date().toISOString(),
+          } : p
+      ));
+      setShowEditModal(false); setEditingPost(null);
+      alert("Post updated successfully!");
+    } catch (error) {
+      console.error("Failed to update post:", error);
+      alert(`Error updating post: ${error?.error || 'Please try again.'}`);
+    }
+  };
+
+  return (
+      <div className="w-full bg-gray-100 flex flex-col min-h-screen font-sans">
+        <Header isLoggedIn={isUserLoggedIn} userName={currentUser?.name} userAvatar={currentUser?.avatar} onLogout={handleActualLogout} />
+        <main className="flex-grow w-full max-w-[960px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <h1 className="text-3xl font-bold text-gray-800 mb-6">Discussion</h1>
+          <div className="mb-6 flex flex-wrap gap-2">
+            {availableTopics.map(topic => (
+                <button key={topic.name} onClick={() => setActiveFilter(topic.name)}
+                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${activeFilter === topic.name ? 'bg-[#14AE5C] text-white shadow-sm' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}>
+                  {topic.name}
+                </button>
+            ))}
+          </div>
+
+          {isUserLoggedIn && currentUser && (
+              <div className="bg-white p-5 rounded-lg shadow-md mb-8">
+                <div className="flex items-start gap-3">
+                  <img src={currentUser.avatar} alt="Your avatar" className="w-10 h-10 rounded-full object-cover" onError={(e) => { e.target.onerror = null; e.target.src="https://placehold.co/40x40/cccccc/FFFFFF?text=Me"; }} />
+                  <form onSubmit={handleCreatePost} className="flex-grow">
+                    <textarea value={newPostText} onChange={(e) => setNewPostText(e.target.value)} placeholder="What's on your mind about trees today?" className="w-full p-3 border border-gray-300 rounded-md resize-none focus:ring-1 focus:ring-[#14AE5C] focus:border-transparent text-sm" rows="3"></textarea>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-2 mt-2 items-center text-sm">
+                      <div className="flex items-center">
+                        <svg className="w-5 h-5 text-gray-500 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd"></path></svg>
+                        <input type="text" value={newPostImage} onChange={(e) => setNewPostImage(e.target.value)} placeholder="Add Photo URL (optional)" className="flex-grow p-1.5 border border-gray-300 rounded-md text-xs focus:ring-1 focus:ring-[#14AE5C] w-full"/>
+                      </div>
+                      <div className="flex items-center">
+                        <svg className="w-5 h-5 text-gray-500 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h10a3 3 0 013 3v5a.997.997 0 01-.293-.707zM11 5a1 1 0 10-2 0v3H7a1 1 0 100 2h2v3a1 1 0 102 0v-3h2a1 1 0 100-2h-2V5z" clipRule="evenodd"></path></svg>
+                        <input type="text" value={newPostTagsString} onChange={(e) => setNewPostTagsString(e.target.value)} placeholder="Add Tags (comma-separated)" className="flex-grow p-1.5 border border-gray-300 rounded-md text-xs focus:ring-1 focus:ring-[#14AE5C] w-full"/>
+                      </div>
+                      <div className="flex items-center">
+                        <svg className="w-5 h-5 text-gray-500 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M12.232 4.232a2.5 2.5 0 013.536 3.536l-1.225 1.224a.75.75 0 001.061 1.06l1.224-1.224a4 4 0 00-5.656-5.656l-3 3a4 4 0 00.225 5.865.75.75 0 00.976-1.138 2.5 2.5 0 01-.142-3.667l3-3z"></path><path d="M8.603 14.97a2.5 2.5 0 01-3.535-3.536l1.225-1.224a.75.75 0 00-1.061-1.06l-1.224 1.224a4 4 0 005.656 5.656l3-3a4 4 0 00-.225-5.865.75.75 0 00-.976 1.138 2.5 2.5 0 01.142 3.667l-3 3z"></path></svg>
+                        <input type="url" value={newPostLinkUrl} onChange={(e) => setNewPostLinkUrl(e.target.value)} placeholder="Add Link URL (optional)" className="flex-grow p-1.5 border border-gray-300 rounded-md text-xs focus:ring-1 focus:ring-[#14AE5C] w-full"/>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex justify-end">
+                      <button type="submit" className="bg-[#14AE5C] hover:bg-[#129b52] text-white font-semibold py-1.5 px-4 rounded-md text-sm transition-colors">Post</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+          )}
+
+          <div>
+            {isLoading && <p className="text-center text-gray-500 py-10">Loading posts...</p>}
+            {!isLoading && posts.length === 0 && (<p className="text-center text-gray-500 py-10">No posts found for "{activeFilter}".{isUserLoggedIn && currentUser && " Why not create one?"}{!isUserLoggedIn && " Login to create posts or view more."}</p>)}
+            {!isLoading && posts.length > 0 && (
+                posts.map(post => (
+                    <BlogPostCard key={post.id} post={post} onLike={handleLikePost} onComment={handleCreateComment} onDelete={handleDeletePost} onEdit={handleEditPostTrigger} currentUser={currentUser} />
+                ))
+            )}
+          </div>
+        </main>
+        <Footer />
+        <EditPostModal isOpen={showEditModal} onClose={() => { setShowEditModal(false); setEditingPost(null); }} postToEdit={editingPost} onUpdatePost={handleUpdatePostSubmit} currentUser={currentUser} />
+      </div>
+  );
+};
+
 export default Post;
