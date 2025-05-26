@@ -374,30 +374,21 @@ const GetCommentsForPostModel = async (postId: number, skip?: number, take?: num
         take: take,
     });
 };
-const GetLikesForPostModel = async (postId: number, skip?: number, take?: number) => {
+const GetLikesForPostModel = async (postId: number) => {
     const postExists = await db.post.findUnique({
         where: { id: postId },
     });
+
     if (!postExists) {
         return null;
     }
-
-    return db.like.findMany({
+    // Return the count of likes for the post
+    const likeCount = await db.like.count({ 
         where: {
             postId: postId,
         },
-        include: {
-            user: {
-                select: {
-                    id: true,
-                    username: true,
-                    profile: true,
-                },
-            },
-        },
-        skip: skip,
-        take: take,
     });
+    return likeCount;
 };
 export default {CreatePostModel, UpdatePostModel, DeletePostModel,
     CreateCommentModel, LikeUnlikePostModel, GetAllPostsModel, GetPostsByTagModel,
