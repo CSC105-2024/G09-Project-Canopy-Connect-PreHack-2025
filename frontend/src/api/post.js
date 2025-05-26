@@ -6,7 +6,7 @@ export const createPost = async() => {
         const response = await Axios.post('/post/CreatePost',{
             // any input? if there is put it here
         }) 
-        return response.data; //to return the data of create post
+        return response; //to return the data of create post
     } catch (error) {
         console.error('Create post error: ',error);
         throw error;
