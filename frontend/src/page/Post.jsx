@@ -7,7 +7,7 @@ import {
   getAllTagsAPI,
   createPostAPI,
   updatePostAPI,
-  likeUnlikePostAPI,      // For like/unlike actions
+  likeUnlikePostAPI,       // For like/unlike actions
   createCommentAPI,
   deletePostAPI,
   getCommentsForPostAPI,  // For BlogPostCard fetching its comments
@@ -106,7 +106,7 @@ const BlogPostCard = ({post, onLike, onComment, onDelete, onEdit, currentUser,})
     } finally {
       setIsLoadingComments(false);
     }
-  }, [postId]);
+  }, [postId, isLoadingComments]); // Added isLoadingComments to dependency array
 
   useEffect(() => {
     if (showComments && postId && !commentsEverFetched) {
@@ -135,13 +135,11 @@ const BlogPostCard = ({post, onLike, onComment, onDelete, onEdit, currentUser,})
         }
       } catch (error) { /* Parent handles error alerts */ }
     } else if (!currentUser?.id) {
-      alert("Please log in to comment.");
     }
   };
 
   const handleLikeClick = async () => {
     if (!currentUser?.id) {
-      alert("Please log in to like posts.");
       return;
     }
     const previousIsLiked = isLiked;
@@ -169,7 +167,6 @@ const BlogPostCard = ({post, onLike, onComment, onDelete, onEdit, currentUser,})
         onDelete(postId);
       }
     } else {
-      alert("You can only delete your own posts.");
     }
   };
 
@@ -179,10 +176,8 @@ const BlogPostCard = ({post, onLike, onComment, onDelete, onEdit, currentUser,})
       if (onEdit) {
         onEdit(post);
       } else {
-        alert("Edit functionality not yet implemented.");
       }
     } else {
-      alert("You can only edit your own posts.");
     }
   };
 
@@ -308,7 +303,8 @@ const BlogPostCard = ({post, onLike, onComment, onDelete, onEdit, currentUser,})
 };
 
 // --- EditPostModal Component ---
-const EditPostModal = ({ isOpen, onClose, postToEdit, onUpdatePost, currentUser }) => {
+// ADDED: showNotification prop
+const EditPostModal = ({ isOpen, onClose, postToEdit, onUpdatePost, currentUser, showNotification }) => {
   const [editedContent, setEditedContent] = useState("");
   const [editedImage, setEditedImage] = useState("");
   const [editedTagsString, setEditedTagsString] = useState("");
@@ -328,7 +324,9 @@ const EditPostModal = ({ isOpen, onClose, postToEdit, onUpdatePost, currentUser 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!editedContent.trim()) {
-      alert("Post content cannot be empty!");
+      if (showNotification) { // ADDED: Call showNotification if available
+        showNotification("Post content cannot be empty!", "error");
+      }
       return;
     }
     const tagNamesArray = editedTagsString.split(',').map(tag => tag.trim()).filter(tag => tag !== "");
@@ -393,6 +391,10 @@ export const Post = () => {
   const [editingPost, setEditingPost] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
 
+  // ADDED: State and ref for notification
+  const [notification, setNotification] = useState({ show: false, message: "", type: "success" });
+  const notificationTimeoutRef = useRef(null);
+
   useEffect(() => {
     const loadUser = async () => {
       try {
@@ -456,7 +458,18 @@ export const Post = () => {
       }
     };
     fetchPosts();
-  }, [activeFilter, currentUser]);
+  }, [activeFilter, currentUser]); // Original dependency array
+
+  // ADDED: Function to show notification
+  const showNotification = (message, type = "success") => {
+    if (notificationTimeoutRef.current) {
+        clearTimeout(notificationTimeoutRef.current);
+    }
+    setNotification({ show: true, message, type });
+    notificationTimeoutRef.current = setTimeout(() => {
+        setNotification({ show: false, message: "", type: "success" });
+    }, 3000); // Auto-hide after 3 seconds
+  };
 
   const handleActualLogout = async () => {
     try {
@@ -464,18 +477,24 @@ export const Post = () => {
       setIsUserLoggedIn(false);
       setCurrentUser(null);
       setActiveFilter("All topics");
-      alert("You have been logged out.");
+      showNotification("You have been logged out."); // ADDED
       navigate("/");
     } catch (error) {
       console.error("Logout failed:", error);
-      alert("Logout failed. Please try again.");
+      showNotification("Logout failed. Please try again.", "error"); // ADDED
     }
   };
 
   const handleCreatePost = async (e) => {
     e.preventDefault();
-    if (!newPostText.trim()) { alert("Post content cannot be empty!"); return; }
-    if (!currentUser?.id) { alert("You must be logged in to create a post."); navigate("/login"); return; }
+    if (!newPostText.trim()) {
+        showNotification("Post content cannot be empty!", "error"); // ADDED
+        return;
+    }
+    if (!currentUser?.id) {
+        showNotification("You must be logged in to create a post.", "error"); // ADDED
+        navigate("/login"); return;
+    }
     const tagNamesArray = newPostTagsString.split(',').map(tag => tag.trim()).filter(tag => tag !== "");
     const postData = {
       content: newPostText.trim(), authorId: currentUser.id,
@@ -496,15 +515,16 @@ export const Post = () => {
       };
       setPosts([newPostForState, ...posts]);
       setNewPostText(""); setNewPostImage(""); setNewPostTagsString(""); setNewPostLinkUrl("");
+      showNotification("Post created successfully!"); // ADDED
     } catch (error) {
       console.error("Failed to create post", error);
-      alert(`Error creating post: ${error?.error || 'Please try again.'}`);
+      showNotification(`Error creating post: ${error?.error || 'Please try again.'}`, "error"); // ADDED
     }
   };
 
   const handleLikePost = async (postId, userId) => {
     if (!userId) {
-      alert("Please log in to like a post.");
+      showNotification("Please log in to like a post.", "error"); // ADDED
       throw new Error("User not logged in to like.");
     }
     try {
@@ -512,40 +532,46 @@ export const Post = () => {
       setPosts(prevPosts => prevPosts.map(p =>
           p.id === postId ? { ...p, likeCount: result.likeCount } : p
       ));
+      // showNotification(result.liked ? "Post liked!" : "Post unliked!"); // Optional: notification for like/unlike
       return { liked: result.liked, likeCount: result.likeCount }; // Return full result
     } catch (error) {
       console.error("Failed to like/unlike post in Post.jsx:", error);
-      alert(`Error liking/unliking post: ${error?.error || 'Please try again.'}`);
+      showNotification(`Error liking/unliking post: ${error?.error || 'Please try again.'}`, "error"); // ADDED
       throw error;
     }
   };
 
   const handleCreateComment = async (postId, commentContent, userId) => {
-    if (!userId) { alert("Please log in to comment."); navigate("/login"); throw new Error("User not logged in"); }
+    if (!userId) {
+        showNotification("Please log in to comment.", "error"); // ADDED
+        navigate("/login"); throw new Error("User not logged in");
+    }
     try {
       const newCommentData = await createCommentAPI(postId, { content: commentContent, userId: userId });
-      // The count on the parent post object is just an estimate; BlogPostCard will re-fetch and get definitive count.
-      // However, incrementing it here helps if BlogPostCard relies on it for the "Show Comments (X)" text before re-fetch.
       setPosts(prevPosts => prevPosts.map(p =>
           p.id === postId ? { ...p, commentsCount: (p.commentsCount || 0) + 1 } : p
       ));
+      showNotification("Comment posted!"); // ADDED
       return newCommentData;
     } catch (error) {
       console.error("Failed to create comment from Post.jsx:", error);
-      alert(`Error creating comment: ${error?.error || 'Please try again.'}`);
+      showNotification(`Error creating comment: ${error?.error || 'Please try again.'}`, "error"); // ADDED
       throw error;
     }
   };
 
   const handleDeletePost = async (postId) => {
-    if (!currentUser?.id) { alert("You must be logged in to delete a post."); navigate("/login"); return; }
+    if (!currentUser?.id) {
+        showNotification("You must be logged in to delete a post.", "error"); // ADDED
+        navigate("/login"); return;
+    }
     try {
       await deletePostAPI(postId);
       setPosts(posts.filter(p => p.id !== postId));
-      alert("Post deleted successfully.");
+      showNotification("Post deleted successfully."); // ADDED
     } catch (error) {
       console.error("Failed to delete post:", error);
-      alert(`Error deleting post: ${error?.error || 'Please try again.'}`);
+      showNotification(`Error deleting post: ${error?.error || 'Please try again.'}`, "error"); // ADDED
     }
   };
 
@@ -555,7 +581,10 @@ export const Post = () => {
   };
 
   const handleUpdatePostSubmit = async (postId, updatedData) => {
-    if (!currentUser?.id) { alert("You must be logged in to update a post."); return; }
+    if (!currentUser?.id) {
+        showNotification("You must be logged in to update a post.", "error"); // ADDED
+        return;
+    }
     try {
       const updatedPostFromAPI = await updatePostAPI(postId, updatedData);
       setPosts(prevPosts => prevPosts.map(p =>
@@ -567,15 +596,35 @@ export const Post = () => {
           } : p
       ));
       setShowEditModal(false); setEditingPost(null);
-      alert("Post updated successfully!");
+      showNotification("Post updated successfully!"); // ADDED
     } catch (error) {
       console.error("Failed to update post:", error);
-      alert(`Error updating post: ${error?.error || 'Please try again.'}`);
+      showNotification(`Error updating post: ${error?.error || 'Please try again.'}`, "error"); // ADDED
     }
   };
 
   return (
       <div className="w-full bg-gray-100 flex flex-col min-h-screen font-sans">
+        {/* ADDED: Notification Display */}
+        {notification.show && (
+            <div
+                className={`fixed top-4 right-4 z-[1000] p-4 rounded-md shadow-lg text-white
+                ${notification.type === "success" ? "bg-green-500" : ""}
+                ${notification.type === "error" ? "bg-red-500" : ""}
+                ${notification.type === "info" ? "bg-blue-500" : ""}`}
+            >
+                {notification.message}
+                <button
+                    onClick={() => {
+                        if (notificationTimeoutRef.current) clearTimeout(notificationTimeoutRef.current);
+                        setNotification({ show: false, message: "", type: "success" });
+                    }}
+                    className="ml-4 text-lg font-semibold leading-none"
+                    aria-label="Close notification"
+                >&times;</button>
+            </div>
+        )}
+
         <Header isLoggedIn={isUserLoggedIn} userName={currentUser?.name} userAvatar={currentUser?.avatar} onLogout={handleActualLogout} />
         <main className="flex-grow w-full max-w-[960px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <h1 className="text-3xl font-bold text-gray-800 mb-6">Discussion</h1>
@@ -627,7 +676,8 @@ export const Post = () => {
           </div>
         </main>
         <Footer />
-        <EditPostModal isOpen={showEditModal} onClose={() => { setShowEditModal(false); setEditingPost(null); }} postToEdit={editingPost} onUpdatePost={handleUpdatePostSubmit} currentUser={currentUser} />
+        {/* ADDED: Pass showNotification to EditPostModal */}
+        <EditPostModal isOpen={showEditModal} onClose={() => { setShowEditModal(false); setEditingPost(null); }} postToEdit={editingPost} onUpdatePost={handleUpdatePostSubmit} currentUser={currentUser} showNotification={showNotification} />
       </div>
   );
 };
