@@ -17,7 +17,6 @@ export const Header = () => {
             src={'/logo.png'} // Ensure this logo path is correct
             alt="Canopy Green Logo"
             className="w-[46px] h-[46px]"
-            onError={(e) => { e.target.onerror = null; e.target.src="https://placehold.co/46x46/14AE5C/FFFFFF?text=Logo"; }}
           />
           <div className="text-[#14AE5C] text-[32px] font-extrabold ml-2.5">
             Canopy Green
@@ -69,7 +68,7 @@ export const Checkbox = ({
       <label htmlFor={id} className="flex items-center gap-2.5 cursor-pointer">
         <div
           className={`w-6 h-6 border-2 rounded flex items-center justify-center
-                      ${isChecked ? 'bg-[#14AE5C] border-[#14AE5C]' : 'border-gray-400'}`}
+            ${isChecked ? 'bg-[#14AE5C] border-[#14AE5C]' : 'border-gray-400'}`}
         >
           {isChecked && (
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -103,12 +102,12 @@ export const Button = ({
     }
   } else if (variant === "secondary") {
     variantClasses = "bg-transparent text-[#2F6F42] hover:underline";
-     if (disabled) {
+    if (disabled) {
       variantClasses = "bg-transparent text-gray-500 cursor-not-allowed";
     }
   } else if (variant === "outline") {
     variantClasses = "border border-[#2F6F42] text-[#2F6F42] hover:bg-[#2f6f42]/10";
-     if (disabled) {
+    if (disabled) {
       variantClasses = "border border-gray-400 text-gray-500 cursor-not-allowed";
     }
   }
@@ -143,7 +142,7 @@ export const Button = ({
   );
 };
 
-// LoginForm Component -- MODIFIED
+// LoginForm Component -- MODIFIED with password visibility
 export const LoginForm = ({
   onLogin = () => {},
   onNavigateToSignUp = () => {},
@@ -151,22 +150,27 @@ export const LoginForm = ({
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
-  const [loginError, setLoginError] = useState(""); // <-- New state for login error
-  const [isLoading, setIsLoading] = useState(false); // <-- New state for loading
+  const [loginError, setLoginError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // <-- New state for password visibility
 
   const navigate = useNavigate();
 
   const handleInputChange = (setter) => (e) => {
     setter(e.target.value);
     if (loginError) {
-      setLoginError(""); // Clear error when user types
+      setLoginError("");
     }
+  };
+
+  const togglePasswordVisibility = () => { // <-- New function to toggle visibility
+    setShowPassword(!showPassword);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoginError(""); // Clear previous errors
-    setIsLoading(true); // Set loading state
+    setLoginError("");
+    setIsLoading(true);
 
     if (!username || !password) {
       setLoginError("Please enter both username and password.");
@@ -175,29 +179,22 @@ export const LoginForm = ({
     }
 
     try {
-      // loginUser is expected to return user data on success, or throw an error
       const userData = await loginUser(username, password, rememberMe);
-      
-      // If loginUser resolves without error, it's a success.
-      // The structure of userData depends on your backend's success response.
-      // Assuming userData directly contains the user object or relevant session data.
-      onLogin({ user: userData, rememberMe }); // Pass the received data
-      navigate('/'); // Navigate to homepage on successful login
+      onLogin({ user: userData, rememberMe });
+      navigate('/');
 
     } catch (error) {
-      console.error("Login API Error:", error); // Keep for debugging
+      console.error("Login API Error:", error);
       if (error.response && error.response.data && error.response.data.error) {
-        // Use the specific error message from the backend
         setLoginError(error.response.data.error);
       } else if (error.message) {
         setLoginError(error.message);
       }
       else {
-        // Fallback generic error message
         setLoginError("Login failed. Please check your credentials and try again.");
       }
     } finally {
-      setIsLoading(false); // Reset loading state
+      setIsLoading(false);
     }
   };
 
@@ -210,7 +207,6 @@ export const LoginForm = ({
         Login to continue in Canopy Green
       </p>
 
-      {/* Display Login Error Message */}
       {loginError && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 text-sm" role="alert">
           <span className="block sm:inline">{loginError}</span>
@@ -225,7 +221,7 @@ export const LoginForm = ({
           id="login-username"
           type="text"
           value={username}
-          onChange={handleInputChange(setUsername)} // Updated onChange
+          onChange={handleInputChange(setUsername)}
           className="w-full h-[46px] border text-base px-[15px] py-0 rounded-md border-solid border-gray-300 focus:border-[#14AE5C] focus:ring-1 focus:ring-[#14AE5C] outline-none max-sm:h-10"
           required
           disabled={isLoading}
@@ -236,15 +232,30 @@ export const LoginForm = ({
         <label htmlFor="login-password" className="text-[#2F6F42] text-base mb-[10px] block font-medium">
           Password<span className="text-[#F00]">*</span>
         </label>
-        <input
-          id="login-password"
-          type="password"
-          value={password}
-          onChange={handleInputChange(setPassword)} // Updated onChange
-          className="w-full h-[46px] border text-base px-[15px] py-0 rounded-md border-solid border-gray-300 focus:border-[#14AE5C] focus:ring-1 focus:ring-[#14AE5C] outline-none max-sm:h-10"
-          required
-          disabled={isLoading}
-        />
+        <div className="relative"> {/* Added wrapper for positioning */}
+          <input
+            id="login-password"
+            type={showPassword ? "text" : "password"} // <-- Dynamically set type
+            value={password}
+            onChange={handleInputChange(setPassword)}
+            className="w-full h-[46px] border text-base px-[15px] py-0 pr-10 rounded-md border-solid border-gray-300 focus:border-[#14AE5C] focus:ring-1 focus:ring-[#14AE5C] outline-none max-sm:h-10" // Added pr-10 for icon spacing
+            required
+            disabled={isLoading}
+          />
+          <button
+            type="button"
+            onClick={togglePasswordVisibility}
+            className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            disabled={isLoading}
+          >
+            <img
+              src={showPassword ? "/eyeclose.png" : "/eyeopen.png"} // <-- Dynamically set icon
+              alt={showPassword ? "Hide password" : "Show password"}
+              className="h-5 w-5 text-gray-500" // Adjust size as needed
+            />
+          </button>
+        </div>
       </div>
 
       <div className="mb-[30px]">
@@ -253,7 +264,7 @@ export const LoginForm = ({
           label="Remember me"
           checked={rememberMe}
           onChange={setRememberMe}
-          disabled={isLoading}
+          disabled={isLoading} // Checkbox component does not directly support disabled prop, this is for the Button
         />
       </div>
 
@@ -263,7 +274,7 @@ export const LoginForm = ({
         size="lg"
         fullWidth
         className="mb-5"
-        disabled={isLoading} // Disable button while loading
+        disabled={isLoading}
       >
         {isLoading ? 'Logging in...' : 'Login'}
       </Button>
@@ -284,7 +295,7 @@ export const LoginForm = ({
 };
 
 
-// SignupForm Component (remains the same as your provided version)
+// SignupForm Component -- MODIFIED with password visibility
 export const SignupForm = ({
   onSignUp = () => {},
   onNavigateToLogin = () => {},
@@ -295,7 +306,9 @@ export const SignupForm = ({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [termsAgreed, setTermsAgreed] = useState(false);
   const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false); 
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // <-- New state for password visibility
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false); // <-- New state for confirm password visibility
 
   const handleInputChange = (setter, isCheckbox = false) => (e) => {
     setter(isCheckbox ? e.target.checked : e.target.value);
@@ -304,11 +317,18 @@ export const SignupForm = ({
     }
   };
 
+  const togglePasswordVisibility = () => { // <-- New function
+    setShowPassword(!showPassword);
+  };
+
+  const toggleConfirmPasswordVisibility = () => { // <-- New function
+    setShowConfirmPassword(!showConfirmPassword);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
-
 
     if (!username || !email || !password || !confirmPassword) {
       setError("All fields marked with * are required.");
@@ -325,11 +345,28 @@ export const SignupForm = ({
       setIsLoading(false);
       return;
     }
-    const register = await registerUser(username,password,email);
-    if(!register){
-      console.error("Register failed.")
+    try {
+      const register = await registerUser(username, password, email); // Assuming registerUser handles success/failure feedback
+      if (!register || (register && register.error) ) { // Adjust based on actual registerUser response
+        console.error("Register failed.", register ? register.error : "Unknown error");
+        setError( (register && register.error) || "Registration failed. Please try again.");
+        setIsLoading(false);
+        return;
+      }
+      onSignUp({ username, email, password, termsAgreed }); // Call this on successful registration
+      // Navigation might occur in the onSignUp prop or here after success
+    } catch (apiError) {
+        console.error("Signup API Error:", apiError);
+        if (apiError.response && apiError.response.data && apiError.response.data.error) {
+            setError(apiError.response.data.error);
+        } else if (apiError.message) {
+            setError(apiError.message);
+        } else {
+            setError("Registration failed. An unexpected error occurred.");
+        }
+    } finally {
+        setIsLoading(false);
     }
-    onSignUp({username, email, password, termsAgreed });
   };
 
 
@@ -382,30 +419,60 @@ export const SignupForm = ({
         <label htmlFor="signup-password" className="text-[#2F6F42] text-base mb-[10px] block font-medium">
           Password<span className="text-[#F00]">*</span>
         </label>
-        <input
-          id="signup-password"
-          type="password"
-          value={password}
-          onChange={handleInputChange(setPassword)}
-          className="w-full h-[46px] border text-base px-[15px] py-0 rounded-md border-solid border-gray-300 focus:border-[#14AE5C] focus:ring-1 focus:ring-[#14AE5C] outline-none max-sm:h-10"
-          required
-          disabled={isLoading}
-        />
+        <div className="relative"> {/* Added wrapper for positioning */}
+          <input
+            id="signup-password"
+            type={showPassword ? "text" : "password"} // <-- Dynamically set type
+            value={password}
+            onChange={handleInputChange(setPassword)}
+            className="w-full h-[46px] border text-base px-[15px] py-0 pr-10 rounded-md border-solid border-gray-300 focus:border-[#14AE5C] focus:ring-1 focus:ring-[#14AE5C] outline-none max-sm:h-10" // Added pr-10
+            required
+            disabled={isLoading}
+          />
+          <button
+            type="button"
+            onClick={togglePasswordVisibility}
+            className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            disabled={isLoading}
+          >
+            <img
+              src={showPassword ? "/eyeclose.png" : "/eyeopen.png"} // <-- Dynamically set icon
+              alt={showPassword ? "Hide password" : "Show password"}
+              className="h-5 w-5 text-gray-500"
+            />
+          </button>
+        </div>
       </div>
 
       <div className="mb-[20px]">
         <label htmlFor="signup-confirm-password" className="text-[#2F6F42] text-base mb-[10px] block font-medium">
           Confirm Password<span className="text-[#F00]">*</span>
         </label>
-        <input
-          id="signup-confirm-password"
-          type="password"
-          value={confirmPassword}
-          onChange={handleInputChange(setConfirmPassword)}
-          className="w-full h-[46px] border text-base px-[15px] py-0 rounded-md border-solid border-gray-300 focus:border-[#14AE5C] focus:ring-1 focus:ring-[#14AE5C] outline-none max-sm:h-10"
-          required
-          disabled={isLoading}
-        />
+        <div className="relative"> {/* Added wrapper for positioning */}
+          <input
+            id="signup-confirm-password"
+            type={showConfirmPassword ? "text" : "password"} // <-- Dynamically set type
+            value={confirmPassword}
+            onChange={handleInputChange(setConfirmPassword)}
+            className="w-full h-[46px] border text-base px-[15px] py-0 pr-10 rounded-md border-solid border-gray-300 focus:border-[#14AE5C] focus:ring-1 focus:ring-[#14AE5C] outline-none max-sm:h-10" // Added pr-10
+            required
+            disabled={isLoading}
+          />
+          <button
+            type="button"
+            onClick={toggleConfirmPasswordVisibility}
+            className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
+            aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+            disabled={isLoading}
+          >
+            <img
+              src={showConfirmPassword ? "/eyeclose.png" : "/eyeopen.png"} // <-- Dynamically set icon
+              alt={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+              className="h-5 w-5 text-gray-500"
+            />
+          </button>
+        </div>
       </div>
 
       <div className="mb-[30px]">
@@ -413,8 +480,8 @@ export const SignupForm = ({
           id="terms-agreed"
           label="I agree to the Terms and Conditions"
           checked={termsAgreed}
-          onChange={(checked) => handleInputChange(setTermsAgreed, true)({ target: { checked } })} // Adapted for Checkbox
-          disabled={isLoading}
+          onChange={(checked) => handleInputChange(setTermsAgreed, true)({ target: { checked } })}
+          disabled={isLoading} // Checkbox component does not directly support disabled prop
         />
       </div>
 
@@ -460,7 +527,7 @@ export const Footer = () => {
         });
       }
     } else if (window.location.pathname !== '/') {
-       window.location.href = `/#${targetId}`;
+        window.location.href = `/#${targetId}`;
     }
   };
 
@@ -542,22 +609,17 @@ const Index = () => {
     }
   }, [location.pathname]);
 
-  // This function is called by LoginForm on successful login
-  // The 'data' parameter here will be { user: userDataFromApi, rememberMe: boolean }
   const handleSuccessfulLogin = (data) => {
     // console.log("Login successful in Index page, data:", data);
-    // Here, you might want to update some global state (like with Context API or Redux)
-    // For now, navigation is handled within LoginForm, but if global state update is needed,
-    // this is a good place.
-    // The navigation to '/' is already done in LoginForm's handleSubmit on success.
+    // Navigation is handled within LoginForm
   };
 
-  const handleSignUpNavigation = (/* signUpData */) => { // Renamed from handleSignUpSubmit as it mostly navigates
-    // Actual signup logic should be in SignupForm, calling an API.
-    // If signup is successful within SignupForm, it might navigate directly
-    // or call a prop function passed from Index to indicate success.
-    // For now, if onSignUp in SignupForm handles navigation, this can be simpler.
-    navigate("/"); // Or to login page: navigate('/login');
+  const handleSignUpNavigation = (/* signUpData */) => {
+    // console.log("Signup successful indication in Index page, data:", signUpData);
+    // This is called after onSignUp (if it doesn't navigate itself)
+    // Potentially navigate to login or homepage after successful signup
+    // For now, assuming onSignUp (or handleSubmit in SignupForm) handles navigation or next steps.
+    navigate("/"); // Or navigate('/login') if preferred after signup
   };
 
   const handleNavigateToSignUpView = () => {
@@ -580,12 +642,12 @@ const Index = () => {
       <main className="flex-grow bg-[url('/wallpaper2.png')] bg-cover bg-no-repeat bg-center flex items-center justify-center py-[60px] px-4">
         {activeTab === "login" ? (
           <LoginForm
-            onLogin={handleSuccessfulLogin} // Pass the updated handler
+            onLogin={handleSuccessfulLogin}
             onNavigateToSignUp={handleNavigateToSignUpView}
           />
         ) : (
           <SignupForm
-            onSignUp={handleSignUpNavigation} // This prop is called after local validation
+            onSignUp={handleSignUpNavigation}
             onNavigateToLogin={handleNavigateToLoginView}
           />
         )}
