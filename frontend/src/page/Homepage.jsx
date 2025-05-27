@@ -47,7 +47,7 @@ export const Header = ({ isLoggedIn, userName, userAvatar, onLogout }) => {
       if (isMobileMenuOpen && mobileMenuRef.current && !mobileMenuRef.current.contains(event.target)) {
         const hamburgerButton = document.querySelector('[aria-label="Open menu"]');
         if (hamburgerButton && !hamburgerButton.contains(event.target)) {
-            setIsMobileMenuOpen(false);
+          setIsMobileMenuOpen(false);
         }
       }
     };
@@ -469,6 +469,55 @@ export const Footer = () => {
   );
 };
 
+// GoToTopButton Component - NEW
+const GoToTopButton = () => {
+  const [isVisible, setIsVisible] = useState(false);
+
+  // Show button when page is scrolled down
+  const toggleVisibility = () => {
+    if (window.pageYOffset > 300) { // Show button after scrolling 300px
+      setIsVisible(true);
+    } else {
+      setIsVisible(false);
+    }
+  };
+
+  // Set the top cordinate to 0
+  // make scrolling smooth
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
+
+  useEffect(() => {
+    window.addEventListener("scroll", toggleVisibility);
+    return () => {
+      window.removeEventListener("scroll", toggleVisibility);
+    };
+  }, []);
+
+  return (
+    <div className="fixed bottom-10 right-10 z-50">
+      {isVisible && (
+        <button
+          onClick={scrollToTop}
+          className="p-3 bg-[#14AE5C] text-white rounded-full shadow-lg hover:bg-[#129b52] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#14AE5C] transition-colors duration-200"
+          aria-label="Go to top"
+        >
+          <img
+            src="/arrowup.png" // IMAGE PATH: Place arrowup.png in your public folder
+            alt="Go to top"
+            className="w-6 h-6" // Adjust if your image requires different dimensions
+          />
+        </button>
+      )}
+    </div>
+  );
+};
+
+
 // Homepage Component
 const Homepage = () => {
   const navigate = useNavigate();
@@ -533,6 +582,7 @@ const Homepage = () => {
         </div>
       </main>
       <Footer />
+      <GoToTopButton /> {/* ADDED GO TO TOP BUTTON HERE */}
     </div>
   );
 };
