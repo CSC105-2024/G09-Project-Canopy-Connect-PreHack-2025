@@ -310,8 +310,8 @@ export const Useredit = () => {
             actionTaken = true;
         }
         // Original line, might overwrite specific API responses if inputs were different
-        setCurrentUserData(prev => ({ ...prev, username: usernameInput, email: emailInput })); 
-        
+        setCurrentUserData(prev => ({ ...prev, username: usernameInput, email: emailInput }));
+
         if(actionTaken) { // ADDED: Show notification only if an update was processed
              showNotification("Identifying details updated!");
         } else {
@@ -371,7 +371,7 @@ export const Useredit = () => {
             ${notification.type === "info" ? "bg-blue-500" : ""}`} // Added info type styling
         >
           {notification.message}
-          <button 
+          <button
             onClick={() => {
                 if (notificationTimeoutRef.current) clearTimeout(notificationTimeoutRef.current);
                 setNotification({ show: false, message: "", type: "success" });

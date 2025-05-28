@@ -7,22 +7,22 @@ import {
   getAllTagsAPI,
   createPostAPI,
   updatePostAPI,
-  likeUnlikePostAPI,       // For like/unlike actions
+  likeUnlikePostAPI,
   createCommentAPI,
   deletePostAPI,
-  getCommentsForPostAPI,  // For BlogPostCard fetching its comments
-  getPostLikeStatusAPI    // For BlogPostCard fetching initial like status & count
+  getCommentsForPostAPI,
+  getPostLikeStatusAPI
 } from "../api/postApi";
 import { fetchCurrentUser, logoutUser } from "../api/auth";
 import Header from "../component/Header";
 import Footer from "../component/Footer";
 
-// --- BlogPostCard Component ---
+// BlogPostCard Component (no changes from previous version)
 const BlogPostCard = ({post, onLike, onComment, onDelete, onEdit, currentUser,}) => {
   const {
     id: postId, authorImage, authorName, createdAt, updatedAt,
     tags, content, images, links,
-    likeCount: initialLikeCount, // Initial count from the bulk post load
+    likeCount: initialLikeCount,
     commentsCount: initialCommentsCount,
     authorId,
   } = post;
@@ -57,14 +57,14 @@ const BlogPostCard = ({post, onLike, onComment, onDelete, onEdit, currentUser,})
       if (currentUser && currentUser.id && postId) {
         setIsLoadingLikeStatus(true);
         try {
-          const likeData = await getPostLikeStatusAPI(postId); // Expects { liked: boolean, likeCount: number }
+          const likeData = await getPostLikeStatusAPI(postId);
           setIsLiked(likeData.liked || false);
           if (typeof likeData.likeCount === 'number') {
             setCurrentLikes(likeData.likeCount);
           }
         } catch (error) {
           console.error(`Failed to fetch like data for post ${postId}:`, error);
-          setIsLiked(false); // Default on error
+          setIsLiked(false);
         } finally {
           setIsLoadingLikeStatus(false);
         }
@@ -106,7 +106,7 @@ const BlogPostCard = ({post, onLike, onComment, onDelete, onEdit, currentUser,})
     } finally {
       setIsLoadingComments(false);
     }
-  }, [postId, isLoadingComments]); // Added isLoadingComments to dependency array
+  }, [postId, isLoadingComments]);
 
   useEffect(() => {
     if (showComments && postId && !commentsEverFetched) {
@@ -130,7 +130,7 @@ const BlogPostCard = ({post, onLike, onComment, onDelete, onEdit, currentUser,})
         if (newComment) {
           setCommentText("");
           if (showComments) {
-            fetchPostComments(); // Refresh comments list and count
+            fetchPostComments();
           }
         }
       } catch (error) { /* Parent handles error alerts */ }
@@ -151,11 +151,9 @@ const BlogPostCard = ({post, onLike, onComment, onDelete, onEdit, currentUser,})
         setIsLiked(likeResult.liked);
         setCurrentLikes(likeResult.likeCount);
       } else {
-        console.warn("onLike did not return expected like data. Reverting optimistic UI for button state.");
         setIsLiked(previousIsLiked);
       }
     } catch (error) {
-      console.error("Error during like/unlike operation, reverting UI for button state:", error);
       setIsLiked(previousIsLiked);
     }
   };
@@ -166,7 +164,6 @@ const BlogPostCard = ({post, onLike, onComment, onDelete, onEdit, currentUser,})
       if (window.confirm("Are you sure you want to delete this post?")) {
         onDelete(postId);
       }
-    } else {
     }
   };
 
@@ -175,9 +172,7 @@ const BlogPostCard = ({post, onLike, onComment, onDelete, onEdit, currentUser,})
     if (currentUser?.id === authorId) {
       if (onEdit) {
         onEdit(post);
-      } else {
       }
-    } else {
     }
   };
 
@@ -190,7 +185,7 @@ const BlogPostCard = ({post, onLike, onComment, onDelete, onEdit, currentUser,})
   const displayCreationDate = creationDate.toLocaleDateString('en-US', {
     month: 'long', day: 'numeric', year: 'numeric'
   });
-  const wasEdited = lastUpdatedDate.getTime() > creationDate.getTime() + 60000; // 1 minute threshold
+  const wasEdited = lastUpdatedDate.getTime() > creationDate.getTime() + 60000;
   let editedDateString = "";
   if (wasEdited) {
     editedDateString = lastUpdatedDate.toLocaleDateString('en-US', {
@@ -302,8 +297,7 @@ const BlogPostCard = ({post, onLike, onComment, onDelete, onEdit, currentUser,})
   );
 };
 
-// --- EditPostModal Component ---
-// ADDED: showNotification prop
+// EditPostModal Component (no changes from previous version)
 const EditPostModal = ({ isOpen, onClose, postToEdit, onUpdatePost, currentUser, showNotification }) => {
   const [editedContent, setEditedContent] = useState("");
   const [editedImage, setEditedImage] = useState("");
@@ -324,7 +318,7 @@ const EditPostModal = ({ isOpen, onClose, postToEdit, onUpdatePost, currentUser,
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!editedContent.trim()) {
-      if (showNotification) { // ADDED: Call showNotification if available
+      if (showNotification) {
         showNotification("Post content cannot be empty!", "error");
       }
       return;
@@ -391,9 +385,18 @@ export const Post = () => {
   const [editingPost, setEditingPost] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
 
-  // ADDED: State and ref for notification
   const [notification, setNotification] = useState({ show: false, message: "", type: "success" });
   const notificationTimeoutRef = useRef(null);
+
+  const refreshAvailableTopics = async () => {
+    try {
+      const fetchedTags = await getAllTagsAPI();
+      setAvailableTopics([{ name: "All topics", count: 0 }, ...(fetchedTags || [])]);
+    } catch (error) {
+      console.error("Failed to refresh tags:", error);
+      setAvailableTopics([{ name: "All topics", count: 0 }]);
+    }
+  };
 
   useEffect(() => {
     const loadUser = async () => {
@@ -411,7 +414,6 @@ export const Post = () => {
           setCurrentUser(null);
         }
       } catch (error) {
-        console.error("Auth Error: Failed to fetch current user.", error);
         setIsUserLoggedIn(false);
         setCurrentUser(null);
       }
@@ -420,17 +422,9 @@ export const Post = () => {
   }, []);
 
   useEffect(() => {
-    const fetchTags = async () => {
-      try {
-        const fetchedTags = await getAllTagsAPI();
-        setAvailableTopics([{ name: "All topics", count: 0 }, ...(fetchedTags || [])]);
-      } catch (error) {
-        console.error("Failed to fetch tags:", error);
-        setAvailableTopics([{ name: "All topics", count: 0 }]);
-      }
-    };
-    fetchTags();
+    refreshAvailableTopics();
   }, []);
+
 
   useEffect(() => {
     const fetchPosts = async () => {
@@ -451,24 +445,62 @@ export const Post = () => {
         }));
         setPosts(processedPosts);
       } catch (error) {
-        console.error(`Failed to fetch posts for filter "${activeFilter}":`, error);
         setPosts([]);
       } finally {
         setIsLoading(false);
       }
     };
     fetchPosts();
-  }, [activeFilter, currentUser]); // Original dependency array
+  }, [activeFilter, currentUser]);
 
-  // ADDED: Function to show notification
+  // ***** MODIFIED SECTION START *****
+  useEffect(() => {
+    if (currentUser && currentUser.id && posts.length > 0) {
+      const postsNeedUpdate = posts.some(post => {
+        if (post.authorId === currentUser.id) {
+          const nameMismatch = currentUser.name && post.authorName !== currentUser.name;
+          const avatarMismatch = currentUser.avatar && post.authorImage !== currentUser.avatar;
+          return nameMismatch || avatarMismatch;
+        }
+        return false;
+      });
+
+      if (postsNeedUpdate) {
+        const updatedPostsArray = posts.map(post => {
+          if (post.authorId === currentUser.id) {
+            let newAuthorName = post.authorName;
+            let newAuthorImage = post.authorImage;
+            let hasChanged = false;
+
+            if (currentUser.name && post.authorName !== currentUser.name) {
+              newAuthorName = currentUser.name;
+              hasChanged = true;
+            }
+            if (currentUser.avatar && post.authorImage !== currentUser.avatar) {
+              newAuthorImage = currentUser.avatar;
+              hasChanged = true;
+            }
+
+            if (hasChanged) {
+              return { ...post, authorName: newAuthorName, authorImage: newAuthorImage };
+            }
+          }
+          return post;
+        });
+        setPosts(updatedPostsArray);
+      }
+    }
+  }, [currentUser, posts]);
+  // ***** MODIFIED SECTION END *****
+
   const showNotification = (message, type = "success") => {
     if (notificationTimeoutRef.current) {
-        clearTimeout(notificationTimeoutRef.current);
+      clearTimeout(notificationTimeoutRef.current);
     }
     setNotification({ show: true, message, type });
     notificationTimeoutRef.current = setTimeout(() => {
-        setNotification({ show: false, message: "", type: "success" });
-    }, 3000); // Auto-hide after 3 seconds
+      setNotification({ show: false, message: "", type: "success" });
+    }, 3000);
   };
 
   const handleActualLogout = async () => {
@@ -477,23 +509,22 @@ export const Post = () => {
       setIsUserLoggedIn(false);
       setCurrentUser(null);
       setActiveFilter("All topics");
-      showNotification("You have been logged out."); // ADDED
+      showNotification("You have been logged out.");
       navigate("/");
     } catch (error) {
-      console.error("Logout failed:", error);
-      showNotification("Logout failed. Please try again.", "error"); // ADDED
+      showNotification("Logout failed. Please try again.", "error");
     }
   };
 
   const handleCreatePost = async (e) => {
     e.preventDefault();
     if (!newPostText.trim()) {
-        showNotification("Post content cannot be empty!", "error"); // ADDED
-        return;
+      showNotification("Post content cannot be empty!", "error");
+      return;
     }
     if (!currentUser?.id) {
-        showNotification("You must be logged in to create a post.", "error"); // ADDED
-        navigate("/login"); return;
+      showNotification("You must be logged in to create a post.", "error");
+      navigate("/login"); return;
     }
     const tagNamesArray = newPostTagsString.split(',').map(tag => tag.trim()).filter(tag => tag !== "");
     const postData = {
@@ -511,67 +542,64 @@ export const Post = () => {
         likeCount: createdPostFromAPI.likeCount !== undefined ? createdPostFromAPI.likeCount : 0,
         commentsCount: createdPostFromAPI.commentsCount !== undefined ? createdPostFromAPI.commentsCount : 0,
         authorName: currentUser.name,
-        authorImage: currentUser.avatar,
+        authorImage: currentUser.avatar, // Use current user's avatar for new post
       };
       setPosts([newPostForState, ...posts]);
       setNewPostText(""); setNewPostImage(""); setNewPostTagsString(""); setNewPostLinkUrl("");
-      showNotification("Post created successfully!"); // ADDED
+      showNotification("Post created successfully!");
+      await refreshAvailableTopics();
     } catch (error) {
-      console.error("Failed to create post", error);
-      showNotification(`Error creating post: ${error?.error || 'Please try again.'}`, "error"); // ADDED
+      showNotification(`Error creating post: ${error?.error || 'Please try again.'}`, "error");
     }
   };
 
   const handleLikePost = async (postId, userId) => {
     if (!userId) {
-      showNotification("Please log in to like a post.", "error"); // ADDED
+      showNotification("Please log in to like a post.", "error");
       throw new Error("User not logged in to like.");
     }
     try {
-      const result = await likeUnlikePostAPI(postId, userId); // Expects { likeCount: number, liked: boolean }
+      const result = await likeUnlikePostAPI(postId, userId);
       setPosts(prevPosts => prevPosts.map(p =>
           p.id === postId ? { ...p, likeCount: result.likeCount } : p
       ));
-      // showNotification(result.liked ? "Post liked!" : "Post unliked!"); // Optional: notification for like/unlike
-      return { liked: result.liked, likeCount: result.likeCount }; // Return full result
+      return { liked: result.liked, likeCount: result.likeCount };
     } catch (error) {
-      console.error("Failed to like/unlike post in Post.jsx:", error);
-      showNotification(`Error liking/unliking post: ${error?.error || 'Please try again.'}`, "error"); // ADDED
+      showNotification(`Error liking/unliking post: ${error?.error || 'Please try again.'}`, "error");
       throw error;
     }
   };
 
   const handleCreateComment = async (postId, commentContent, userId) => {
     if (!userId) {
-        showNotification("Please log in to comment.", "error"); // ADDED
-        navigate("/login"); throw new Error("User not logged in");
+      showNotification("Please log in to comment.", "error");
+      navigate("/login"); throw new Error("User not logged in");
     }
     try {
       const newCommentData = await createCommentAPI(postId, { content: commentContent, userId: userId });
       setPosts(prevPosts => prevPosts.map(p =>
           p.id === postId ? { ...p, commentsCount: (p.commentsCount || 0) + 1 } : p
       ));
-      showNotification("Comment posted!"); // ADDED
+      showNotification("Comment posted!");
       return newCommentData;
     } catch (error) {
-      console.error("Failed to create comment from Post.jsx:", error);
-      showNotification(`Error creating comment: ${error?.error || 'Please try again.'}`, "error"); // ADDED
+      showNotification(`Error creating comment: ${error?.error || 'Please try again.'}`, "error");
       throw error;
     }
   };
 
   const handleDeletePost = async (postId) => {
     if (!currentUser?.id) {
-        showNotification("You must be logged in to delete a post.", "error"); // ADDED
-        navigate("/login"); return;
+      showNotification("You must be logged in to delete a post.", "error");
+      navigate("/login"); return;
     }
     try {
       await deletePostAPI(postId);
       setPosts(posts.filter(p => p.id !== postId));
-      showNotification("Post deleted successfully."); // ADDED
+      showNotification("Post deleted successfully.");
+      await refreshAvailableTopics();
     } catch (error) {
-      console.error("Failed to delete post:", error);
-      showNotification(`Error deleting post: ${error?.error || 'Please try again.'}`, "error"); // ADDED
+      showNotification(`Error deleting post: ${error?.error || 'Please try again.'}`, "error");
     }
   };
 
@@ -580,32 +608,42 @@ export const Post = () => {
     setShowEditModal(true);
   };
 
+  // ***** MODIFIED SECTION START *****
   const handleUpdatePostSubmit = async (postId, updatedData) => {
     if (!currentUser?.id) {
-        showNotification("You must be logged in to update a post.", "error"); // ADDED
-        return;
+      showNotification("You must be logged in to update a post.", "error");
+      return;
     }
     try {
       const updatedPostFromAPI = await updatePostAPI(postId, updatedData);
-      setPosts(prevPosts => prevPosts.map(p =>
-          p.id === postId ? {
-            ...p,
-            ...updatedPostFromAPI,
-            createdAt: updatedPostFromAPI.createdAt ? new Date(updatedPostFromAPI.createdAt).toISOString() : p.createdAt,
-            updatedAt: updatedPostFromAPI.updatedAt ? new Date(updatedPostFromAPI.updatedAt).toISOString() : new Date().toISOString(),
-          } : p
+      setPosts(prevPosts => prevPosts.map(p => {
+            if (p.id === postId) {
+              const newAuthorName = p.authorId === currentUser.id ? currentUser.name : (updatedPostFromAPI.authorName || p.authorName);
+              const newAuthorImage = p.authorId === currentUser.id ? currentUser.avatar : (updatedPostFromAPI.authorImage || p.authorImage);
+              return {
+                ...p,
+                ...updatedPostFromAPI,
+                authorName: newAuthorName,
+                authorImage: newAuthorImage,
+                createdAt: updatedPostFromAPI.createdAt ? new Date(updatedPostFromAPI.createdAt).toISOString() : p.createdAt,
+                updatedAt: updatedPostFromAPI.updatedAt ? new Date(updatedPostFromAPI.updatedAt).toISOString() : new Date().toISOString(),
+              };
+            }
+            return p;
+          }
       ));
       setShowEditModal(false); setEditingPost(null);
-      showNotification("Post updated successfully!"); // ADDED
+      showNotification("Post updated successfully!");
+      await refreshAvailableTopics();
     } catch (error) {
-      console.error("Failed to update post:", error);
-      showNotification(`Error updating post: ${error?.error || 'Please try again.'}`, "error"); // ADDED
+      showNotification(`Error updating post: ${error?.error || 'Please try again.'}`, "error");
     }
   };
+  // ***** MODIFIED SECTION END *****
+
 
   return (
       <div className="w-full bg-gray-100 flex flex-col min-h-screen font-sans">
-        {/* ADDED: Notification Display */}
         {notification.show && (
             <div
                 className={`fixed top-4 right-4 z-[1000] p-4 rounded-md shadow-lg text-white
@@ -613,15 +651,15 @@ export const Post = () => {
                 ${notification.type === "error" ? "bg-red-500" : ""}
                 ${notification.type === "info" ? "bg-blue-500" : ""}`}
             >
-                {notification.message}
-                <button
-                    onClick={() => {
-                        if (notificationTimeoutRef.current) clearTimeout(notificationTimeoutRef.current);
-                        setNotification({ show: false, message: "", type: "success" });
-                    }}
-                    className="ml-4 text-lg font-semibold leading-none"
-                    aria-label="Close notification"
-                >&times;</button>
+              {notification.message}
+              <button
+                  onClick={() => {
+                    if (notificationTimeoutRef.current) clearTimeout(notificationTimeoutRef.current);
+                    setNotification({ show: false, message: "", type: "success" });
+                  }}
+                  className="ml-4 text-lg font-semibold leading-none"
+                  aria-label="Close notification"
+              >&times;</button>
             </div>
         )}
 
@@ -676,7 +714,6 @@ export const Post = () => {
           </div>
         </main>
         <Footer />
-        {/* ADDED: Pass showNotification to EditPostModal */}
         <EditPostModal isOpen={showEditModal} onClose={() => { setShowEditModal(false); setEditingPost(null); }} postToEdit={editingPost} onUpdatePost={handleUpdatePostSubmit} currentUser={currentUser} showNotification={showNotification} />
       </div>
   );
