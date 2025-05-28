@@ -86,9 +86,6 @@ Prisma.NullTypes = {
  * Enums
  */
 exports.Prisma.TransactionIsolationLevel = makeStrictEnum({
-  ReadUncommitted: 'ReadUncommitted',
-  ReadCommitted: 'ReadCommitted',
-  RepeatableRead: 'RepeatableRead',
   Serializable: 'Serializable'
 });
 
@@ -160,40 +157,6 @@ exports.Prisma.NullsOrder = {
   last: 'last'
 };
 
-exports.Prisma.UserOrderByRelevanceFieldEnum = {
-  username: 'username',
-  password: 'password',
-  email: 'email',
-  profile: 'profile'
-};
-
-exports.Prisma.PostOrderByRelevanceFieldEnum = {
-  content: 'content',
-  authorName: 'authorName',
-  authorImage: 'authorImage'
-};
-
-exports.Prisma.CommentOrderByRelevanceFieldEnum = {
-  content: 'content'
-};
-
-exports.Prisma.ImageOrderByRelevanceFieldEnum = {
-  url: 'url'
-};
-
-exports.Prisma.FileOrderByRelevanceFieldEnum = {
-  name: 'name',
-  url: 'url'
-};
-
-exports.Prisma.LinkOrderByRelevanceFieldEnum = {
-  url: 'url'
-};
-
-exports.Prisma.TagOrderByRelevanceFieldEnum = {
-  name: 'name'
-};
-
 
 exports.Prisma.ModelName = {
   User: 'User',
@@ -216,7 +179,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "C:\\Users\\NOTEKUNG\\Desktop\\pre-hackathon\\backend\\src\\generated\\prisma",
+      "value": "C:\\Users\\Vanny\\Downloads\\G09-Project-Canopy-Connect-PreHack-2025-main\\backend\\src\\generated\\prisma",
       "fromEnvVar": null
     },
     "config": {
@@ -230,7 +193,7 @@ const config = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "C:\\Users\\NOTEKUNG\\Desktop\\pre-hackathon\\backend\\prisma\\schema.prisma",
+    "sourceFilePath": "C:\\Users\\Vanny\\Downloads\\G09-Project-Canopy-Connect-PreHack-2025-main\\backend\\prisma\\schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
@@ -243,7 +206,7 @@ const config = {
   "datasourceNames": [
     "db"
   ],
-  "activeProvider": "mysql",
+  "activeProvider": "sqlite",
   "inlineDatasources": {
     "db": {
       "url": {
@@ -252,8 +215,8 @@ const config = {
       }
     }
   },
-  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?\n// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init\n\ngenerator client {\n  provider = \"prisma-client-js\"\n  output   = \"../src/generated/prisma\"\n}\n\ndatasource db {\n  provider          = \"mysql\"\n  url               = env(\"DATABASE_URL\")\n  shadowDatabaseUrl = env(\"SHADOW_DATABASE_URL\")\n}\n\nmodel User {\n  id        Int       @id @default(autoincrement())\n  username  String    @unique\n  password  String\n  email     String    @unique\n  profile   String? //store user profile picture in url\n  posts     Post[]\n  likes     Like[]\n  comments  Comment[]\n  createdAt DateTime  @default(now())\n  updatedAt DateTime  @updatedAt\n}\n\nmodel Post {\n  id        Int      @id @default(autoincrement())\n  content   String\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  authorId    Int\n  author      User    @relation(fields: [authorId], references: [id])\n  authorName  String\n  authorImage String?\n\n  images   Image[]\n  files    File[]\n  links    Link[]\n  tags     Tag[]\n  likes    Like[]\n  comments Comment[]\n\n  @@index([authorId])\n}\n\nmodel Like {\n  id     Int @id @default(autoincrement())\n  userId Int\n  postId Int\n\n  user User @relation(fields: [userId], references: [id])\n  post Post @relation(fields: [postId], references: [id])\n\n  @@unique([userId, postId])\n}\n\nmodel Comment {\n  id        Int      @id @default(autoincrement())\n  content   String\n  postId    Int\n  userId    Int\n  createdAt DateTime @default(now())\n\n  user User @relation(fields: [userId], references: [id])\n  post Post @relation(fields: [postId], references: [id])\n}\n\nmodel Image {\n  id     Int    @id @default(autoincrement())\n  url    String\n  postId Int\n  post   Post   @relation(fields: [postId], references: [id])\n}\n\nmodel File {\n  id     Int    @id @default(autoincrement())\n  name   String\n  url    String\n  postId Int\n  post   Post   @relation(fields: [postId], references: [id])\n}\n\nmodel Link {\n  id     Int    @id @default(autoincrement())\n  url    String\n  postId Int\n  post   Post   @relation(fields: [postId], references: [id])\n}\n\nmodel Tag {\n  id    Int    @id @default(autoincrement())\n  name  String @unique\n  posts Post[]\n}\n",
-  "inlineSchemaHash": "78b7c3319ce2f416e298483a476a06ec3674c0dd44cae286b8cc15a606c1853b",
+  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?\n// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init\n\ngenerator client {\n  provider = \"prisma-client-js\"\n  output   = \"../src/generated/prisma\"\n}\n\ndatasource db {\n  provider = \"sqlite\"\n  url      = env(\"DATABASE_URL\")\n}\n\nmodel User {\n  id        Int       @id @default(autoincrement())\n  username  String    @unique\n  password  String\n  email     String    @unique\n  profile   String? //store user profile picture in url\n  posts     Post[]\n  likes     Like[]\n  comments  Comment[]\n  createdAt DateTime  @default(now())\n  updatedAt DateTime  @updatedAt\n}\n\nmodel Post {\n  id        Int      @id @default(autoincrement())\n  content   String\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  authorId    Int\n  author      User    @relation(fields: [authorId], references: [id])\n  authorName  String\n  authorImage String?\n\n  images   Image[]\n  files    File[]\n  links    Link[]\n  tags     Tag[]\n  likes    Like[]\n  comments Comment[]\n\n  @@index([authorId])\n}\n\nmodel Like {\n  id     Int @id @default(autoincrement())\n  userId Int\n  postId Int\n\n  user User @relation(fields: [userId], references: [id])\n  post Post @relation(fields: [postId], references: [id])\n\n  @@unique([userId, postId])\n}\n\nmodel Comment {\n  id        Int      @id @default(autoincrement())\n  content   String\n  postId    Int\n  userId    Int\n  createdAt DateTime @default(now())\n\n  user User @relation(fields: [userId], references: [id])\n  post Post @relation(fields: [postId], references: [id])\n}\n\nmodel Image {\n  id     Int    @id @default(autoincrement())\n  url    String\n  postId Int\n  post   Post   @relation(fields: [postId], references: [id])\n}\n\nmodel File {\n  id     Int    @id @default(autoincrement())\n  name   String\n  url    String\n  postId Int\n  post   Post   @relation(fields: [postId], references: [id])\n}\n\nmodel Link {\n  id     Int    @id @default(autoincrement())\n  url    String\n  postId Int\n  post   Post   @relation(fields: [postId], references: [id])\n}\n\nmodel Tag {\n  id    Int    @id @default(autoincrement())\n  name  String @unique\n  posts Post[]\n}\n",
+  "inlineSchemaHash": "a072a26cb05b8dd013154e6de46ce6012a7e8c6a3c0083f8974237c3ebc9bd05",
   "copyEngine": true
 }
 config.dirname = '/'
