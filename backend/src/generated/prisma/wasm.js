@@ -20,12 +20,12 @@ exports.Prisma = Prisma
 exports.$Enums = {}
 
 /**
- * Prisma Client JS version: 6.8.2
- * Query Engine version: 2060c79ba17c6bb9f5823312b6f6b7f4a845738e
+ * Prisma Client JS version: 6.7.0
+ * Query Engine version: 3cff47a7f5d65c3ea74883f1d736e41d68ce91ed
  */
 Prisma.prismaVersion = {
-  client: "6.8.2",
-  engine: "2060c79ba17c6bb9f5823312b6f6b7f4a845738e"
+  client: "6.7.0",
+  engine: "3cff47a7f5d65c3ea74883f1d736e41d68ce91ed"
 }
 
 Prisma.PrismaClientKnownRequestError = () => {
@@ -121,63 +121,50 @@ exports.Prisma.UserScalarFieldEnum = {
   id: 'id',
   username: 'username',
   password: 'password',
-  email: 'email',
-  profile: 'profile',
-  createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
+  totalScore: 'totalScore'
 };
 
-exports.Prisma.PostScalarFieldEnum = {
+exports.Prisma.QuizScalarFieldEnum = {
   id: 'id',
-  content: 'content',
-  createdAt: 'createdAt',
-  updatedAt: 'updatedAt',
-  authorId: 'authorId',
-  authorName: 'authorName',
-  authorImage: 'authorImage'
+  category: 'category'
 };
 
-exports.Prisma.LikeScalarFieldEnum = {
+exports.Prisma.QuestionScalarFieldEnum = {
+  id: 'id',
+  quizId: 'quizId',
+  text: 'text',
+  imageUrl: 'imageUrl',
+  options: 'options',
+  answer: 'answer'
+};
+
+exports.Prisma.QuizResultScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
-  postId: 'postId'
-};
-
-exports.Prisma.CommentScalarFieldEnum = {
-  id: 'id',
-  content: 'content',
-  postId: 'postId',
-  userId: 'userId',
-  createdAt: 'createdAt'
-};
-
-exports.Prisma.ImageScalarFieldEnum = {
-  id: 'id',
-  url: 'url',
-  postId: 'postId'
-};
-
-exports.Prisma.FileScalarFieldEnum = {
-  id: 'id',
-  name: 'name',
-  url: 'url',
-  postId: 'postId'
-};
-
-exports.Prisma.LinkScalarFieldEnum = {
-  id: 'id',
-  url: 'url',
-  postId: 'postId'
-};
-
-exports.Prisma.TagScalarFieldEnum = {
-  id: 'id',
-  name: 'name'
+  quizId: 'quizId',
+  score: 'score',
+  wrong: 'wrong',
+  unanswered: 'unanswered'
 };
 
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
+};
+
+exports.Prisma.JsonNullValueInput = {
+  JsonNull: Prisma.JsonNull
+};
+
+exports.Prisma.JsonNullValueFilter = {
+  DbNull: Prisma.DbNull,
+  JsonNull: Prisma.JsonNull,
+  AnyNull: Prisma.AnyNull
+};
+
+exports.Prisma.QueryMode = {
+  default: 'default',
+  insensitive: 'insensitive'
 };
 
 exports.Prisma.NullsOrder = {
@@ -188,13 +175,9 @@ exports.Prisma.NullsOrder = {
 
 exports.Prisma.ModelName = {
   User: 'User',
-  Post: 'Post',
-  Like: 'Like',
-  Comment: 'Comment',
-  Image: 'Image',
-  File: 'File',
-  Link: 'Link',
-  Tag: 'Tag'
+  Quiz: 'Quiz',
+  Question: 'Question',
+  QuizResult: 'QuizResult'
 };
 
 /**
